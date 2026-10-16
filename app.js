@@ -1,5 +1,5 @@
 // VolleyLive web: ripresa (o video registrato), riconoscimento della battuta nel browser, punteggio automatico.
-import { ScoreEngine, defaultConfig, AutoScorer, FIRST, SECOND, other } from './engine.js';
+import { ScoreEngine, defaultConfig, AutoScorer, FIRST, SECOND, other, pointDoubts, labelPoints } from './engine.js';
 import { Calibration, PersonDetector, sampleOccupancy, checkCorners } from './vision.js';
 
 const $ = (id) => document.getElementById(id);
@@ -23,6 +23,8 @@ function persist() {
     store.corners = S.corners; store.size = S.size; store.ratio = S.ratio; store.side = $('sideSel').value;
     store.config = S.config; store.snapshot = S.engine ? S.engine.snapshot : null;
     store.armTimes = $('armTimes').value; store.contesaTimes = $('contesaTimes').value;
+    store.issued = S.issued.map((i) => ({ id: i.id, time: i.time, side: i.side, end: i.end, gap: i.gap, q: i.q && { first: i.q.first, last: i.q.last, hits: i.q.hits, conflict: i.q.conflict } }));
+    store.resyncs = S.resyncs; store.confirmed = [...S.confirmed]; store.neutral = [...S.neutral]; store.reviewedAll = $('reviewedChk').checked;
     store.form = { nameA: $('nameA').value, nameB: $('nameB').value, colA: $('colA').value, colB: $('colB').value, first: $('firstSel').value, fmt: $('fmtSel').value };
     localStorage.setItem(KEY, JSON.stringify(store));
   } catch (e) { /* memoria non disponibile */ }
@@ -43,6 +45,7 @@ const S = {
   inferMs: [], samples: 0,
   rec: null, recChunks: [], recMime: '', recBlobUrl: null, recFile: null, recording: false,
   notes: [],
+  resyncs: [], issued: [], issuedPtr: 0, confirmed: new Set(), neutral: new Set(), doubtCount: 0,   // etichette dei punti automatici
 };
 // ripresa a tutto schermo con i tasti sopra l'immagine
 const L = { on: false, phase: 'cal', lent: [], logLen: 0, ro: null, toastTimer: 0 };
@@ -370,7 +373,7 @@ function readConfig() {
 function newScorer() {
   // Con un campione al secondo o più rado ogni presenza conta; con campioni più fitti si chiedono due campioni di fila
   // (scarta i riconoscimenti sbagliati di un solo fotogramma). Provato sui dati reali: mergeGap 12 s.
-  const step = S.mode === 'file' ? +$('stepSel').value : 0.45;
+  const step = sampleStep();
   return new AutoScorer({ mergeGap: 12, confirmSec: step >= 1 ? 0 : 0.3, dropoutSec: Math.max(2.5, step * 1.5) });
 }
 function startMatch(snapshot = null) {
@@ -379,6 +382,16 @@ function startMatch(snapshot = null) {
   S.engine = new ScoreEngine(S.config, snapshot);
   S.scorer = newScorer();
   S.scorer.autoApply = $('autoChk').checked;
+  S.issuedPtr = 0;
+  if (snapshot) {
+    // ripresa: gli id dei punti automatici proseguono e le etichette già raccolte restano
+    S.issued = (store.issued || []).map((i) => ({ ...i, q: i.q && { ...i.q, done: true } }));
+    S.confirmed = new Set(store.confirmed || []); S.neutral = new Set(store.neutral || []); S.resyncs = store.resyncs || [];
+    $('reviewedChk').checked = !!store.reviewedAll;
+    S.scorer.seq = Math.max(0, ...(snapshot.meta || []).map((m) => m.id || 0), ...S.issued.map((i) => i.id || 0));
+  } else {
+    S.issued = []; S.confirmed = new Set(); S.neutral = new Set(); S.resyncs = []; $('reviewedChk').checked = false;
+  }
   $('setup').hidden = true; $('play').hidden = false; $('secReview').hidden = false;
   S.lockCal = true;
   L.logLen = 0;
@@ -420,14 +433,35 @@ function refreshAll() {
   });
   if (document.activeElement !== $('scA') && document.activeElement !== $('scB')) { $('scA').value = st.pointsA; $('scB').value = st.pointsB; }
   const dis = (ids, v) => ids.forEach((id) => { $(id).disabled = v; });
-  dis(['viaBtn', 'hudVia'], st.isFinished);
+  dis(['viaBtn', 'hudVia', 'hudScore'], st.isFinished);
   dis(['contesaBtn', 'hudContesa'], sc.mode === 'idle' || st.isFinished);
   dis(['undoBtn', 'hudUndo'], !S.engine.canUndo);
   dis(['addA', 'addB', 'hudA', 'hudB'], st.isFinished);
+  syncIssued();
+  renderReview();
   updateHud();
   announce(sc);
-  renderReview();
 }
+
+// Che fine fa ogni punto automatico (invertito, tolto, lasciato): serve a misurare la precisione sulle partite vere
+function syncIssued() {
+  const sc = S.scorer;
+  if (!sc) return;
+  for (; S.issuedPtr < sc.log.length; S.issuedPtr++) {
+    const e = sc.log[S.issuedPtr];
+    if (e.action === 'punto') S.issued.push({ id: e.id, time: e.time, side: e.side, end: e.end, gap: e.gap, q: e.q });
+    if (e.undoneId != null) S.neutral.add(e.undoneId);            // tolto dal tasto Contesa: non è un errore
+  }
+}
+// La durata di una presenza si giudica solo a presenza finita: con la camera dopo qualche secondo, con un video a analisi finita
+const doubtNow = () => (S.mode === 'camera' ? clock() : (S.analyzing ? S.video.currentTime : Infinity));
+const sampleStep = () => (S.mode === 'file' ? +$('stepSel').value : 0.45);
+function doubtsOf(it) {
+  const next = S.issued[S.issued.indexOf(it) + 1];
+  return pointDoubts(it, doubtNow(), { nextTime: next ? next.time : null, sampleStep: sampleStep() });
+}
+const DOUBT_TEXT = { ravvicinato: 'troppo vicino a un altro avvistamento', 'presenza breve': 'persona vista pochissimo' };
+const DOUBT_SHORT = { ravvicinato: 'ravvicinato', 'presenza breve': 'visto poco' };
 
 function afterManualChange(prevSet) {
   const st = S.engine.state;
@@ -459,18 +493,35 @@ $('endMatch').onclick = () => {
   $('setup').hidden = false; $('play').hidden = true;
   try { localStorage.removeItem(KEY); } catch (e) { /* ignorato */ }
   S.engine = null; S.scorer = null; S.dirty = true;
+  S.issued = []; S.issuedPtr = 0; S.confirmed = new Set(); S.neutral = new Set(); S.resyncs = []; S.doubtCount = 0;
   if (L.on) { closeMore(); setPhase('setup'); }
 };
 $('debugChk').onchange = () => { S.dirty = true; };
+$('reviewedChk').onchange = () => { persist(); if (S.engine) renderReview(); };
 $('autoChk').onchange = () => { if (S.scorer) S.scorer.autoApply = $('autoChk').checked; };
-$('setScoreBtn').onclick = () => {
-  if (!S.engine) return;
-  const a = parseInt($('scA').value, 10), b = parseInt($('scB').value, 10);
-  if (!(a >= 0 && b >= 0)) { $('copyMsg').textContent = 'Scrivi i due punteggi.'; return; }
-  const ok = S.engine.setScore(a, b, { time: clock(), auto: false });
-  $('copyMsg').textContent = ok ? '' : 'Non posso portare il set a ' + a + '–' + b + ' (chiuderebbe il set: usa i tasti +1 o «Via»).';
+function applyScore(a, b) {
+  if (!S.engine) return false;
+  if (!(a >= 0 && b >= 0)) { $('copyMsg').textContent = 'Scrivi i due punteggi.'; return false; }
+  const before = S.engine.state.pointsA + '-' + S.engine.state.pointsB, t0 = clock();
+  const ok = S.engine.setScore(a, b, { time: t0, auto: false });
+  if (ok && before !== a + '-' + b) S.resyncs.push({ time: t0, set: S.engine.state.currentSet, da: before, a: a + '-' + b });
+  const msg = ok ? '' : 'Non posso portare il set a ' + a + '–' + b + ' (chiuderebbe il set: usa i tasti +1 o «Via»).';
+  $('copyMsg').textContent = msg;
+  if (!ok && L.on) toast(msg);
   S.scorer.lastAutoCount = null;
   persist(); refreshAll();
+  return ok;
+}
+$('setScoreBtn').onclick = () => applyScore(parseInt($('scA').value, 10), parseInt($('scB').value, 10));
+// Risincronizzazione veloce dallo schermo della camera: si scrive il punteggio letto sul tabellone dell'arbitro
+$('hudScore').onclick = () => {
+  if (!S.engine) return;
+  const st = S.engine.state;
+  const r = prompt('Punteggio del set, come sul tabellone (' + teamName('a') + ' – ' + teamName('b') + '), es. 12-9', st.pointsA + '-' + st.pointsB);
+  if (r === null) return;
+  const m = r.match(/(\d+)\D+(\d+)/);
+  if (!m) { toast('Scrivi due numeri, per esempio 12-9'); return; }
+  applyScore(parseInt(m[1], 10), parseInt(m[2], 10));
 };
 
 // ---------------------------------------------------------------- riconoscimento dal vivo
@@ -546,7 +597,7 @@ function startRec() {
   const out = cv.captureStream(30);
   S.stream.getAudioTracks().forEach((t) => out.addTrack(t));
   S.recMime = REC_TYPES.find((t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
-  const opts = { videoBitsPerSecond: 6000000, audioBitsPerSecond: 128000 };
+  const opts = { videoBitsPerSecond: cv.width >= 1600 ? 8000000 : 6000000, audioBitsPerSecond: 128000 };
   if (S.recMime) opts.mimeType = S.recMime;
   try { S.rec = new MediaRecorder(out, opts); } catch (e) { try { S.rec = new MediaRecorder(out); } catch (e2) { $('recStats').textContent = 'Errore: ' + e2.name; return; } }
   S.recMime = S.rec.mimeType || S.recMime;
@@ -557,6 +608,7 @@ function startRec() {
   // gli orari dei punti si misurano dall'inizio del file: se ci sono già punti li si sposta
   const shift = (performance.now() - S.clockStart) / 1000;
   if (S.engine) S.engine.meta.forEach((m) => { if (m.time !== null) m.time = Math.max(0, m.time - shift); });
+  S.issued.forEach((i) => { i.time = Math.max(0, i.time - shift); if (i.q) { i.q.first = Math.max(0, i.q.first - shift); i.q.last = Math.max(0, i.q.last - shift); } });
   S.clockStart = performance.now();
   S.recording = true; S.recStart = performance.now();
   $('recBtn').textContent = 'Ferma la registrazione';
@@ -599,8 +651,11 @@ function renderReview() {
   if (!S.engine) return;
   const tl = S.engine.timeline();
   const hasVideo = S.mode === 'file' || !!S.recBlobUrl;
+  const issuedById = new Map(S.issued.map((i) => [i.id, i]));
+  S.doubtCount = 0;
   tl.forEach((r) => {
     const e = r.event, tr = document.createElement('tr');
+    let doubtIt = null;
     if (r.setEnded) tr.className = 'setend';
     const td = (txt, cls) => { const c = document.createElement('td'); if (cls) c.className = cls; c.textContent = txt; tr.appendChild(c); return c; };
     td(String(r.index + 1), 'num');
@@ -608,6 +663,15 @@ function renderReview() {
     td(String(r.set));
     if (e.type === 'point') {
       const c = td(''); const s = document.createElement('span'); s.className = e.side === 'a' ? 'tA' : 'tB'; s.textContent = teamName(e.side) + (r.meta.auto ? ' ·auto' : ''); c.appendChild(s);
+      const it = r.meta.id != null ? issuedById.get(r.meta.id) : null;
+      if (it && S.confirmed.has(it.id)) { c.append(' ✓'); }
+      else if (it) {
+        const why = doubtsOf(it);
+        if (why.length) {
+          S.doubtCount++; tr.classList.add('doubt'); doubtIt = it;
+          const w = document.createElement('small'); w.className = 'why'; w.textContent = ' ⚠ ' + why.map((x) => DOUBT_SHORT[x]).join(', '); w.title = why.map((x) => DOUBT_TEXT[x]).join('; '); c.appendChild(w);
+        }
+      }
       td(r.a + '–' + r.b, 'num');
     } else {
       td({ timeout: 'time-out', substitution: 'sostituzione', setServing: 'chi batte', swapSides: 'cambio campo' }[e.type] + (e.side ? ' ' + teamName(e.side) : ''));
@@ -616,15 +680,24 @@ function renderReview() {
     const act = document.createElement('td');
     const mk = (label, title, fn, dis) => { const b = document.createElement('button'); b.className = 'small'; b.textContent = label; b.title = title; b.disabled = !!dis; b.onclick = fn; act.appendChild(b); };
     mk('▶︎', 'rivedi', () => previewAt(r.meta.time), !hasVideo || r.meta.time === null);
+    if (doubtIt) mk('✓', 'il punto è giusto: togli il dubbio', () => { S.confirmed.add(doubtIt.id); persist(); refreshAll(); });
     if (e.type === 'point') mk('⇄', 'dai il punto all\'altra squadra', () => correct(S.engine.flipPoint(r.index)));
     mk('✕', 'togli', () => correct(S.engine.removeEvent(r.index)));
     tr.appendChild(act);
     body.appendChild(tr);
   });
+  const { labels, summary } = labelPoints(S.issued, tl, [...S.neutral]);
+  const conf = labels.filter((l) => l.state === 'non toccato' && S.confirmed.has(l.id)).length;
+  $('accStats').textContent = summary.auto
+    ? 'Punti automatici ' + summary.auto + ': ' + summary.nonToccati + ' lasciati (' + conf + ' confermati con ✓), ' + summary.invertiti + ' invertiti, ' + summary.tolti + ' tolti'
+      + (summary.contesa ? ', ' + summary.contesa + ' tolti con la contesa' : '') + ' · ' + summary.manuali + ' punti dati a mano' + (S.resyncs.length ? ' · ' + S.resyncs.length + ' risincronizzazioni (le etichette dopo sono meno sicure)' : '')
+    : '';
   const rep = {
-    versione: 1, quando: new Date().toISOString(), dispositivo: navigator.userAgent, sorgente: S.mode, video: S.size,
+    versione: 2, quando: new Date().toISOString(), dispositivo: navigator.userAgent, sorgente: S.mode, video: S.size,
     calibrazione: { angoli: S.corners, rapporto: S.ratio, misurato: S.measured, latoUno: $('sideSel').value },
-    partita: S.engine.snapshot, registroAuto: S.scorer ? S.scorer.log : [], campioni: S.samples, msPerCampione: Math.round(avgMs()), note: S.notes.slice(-60),
+    partita: S.engine.snapshot, registroAuto: S.scorer ? S.scorer.log : [],
+    etichette: labels.map((l) => ({ id: l.id, orario: l.time, squadra: l.side, lato: l.end, set: l.set, stato: l.state, confermato: S.confirmed.has(l.id), distanzaSec: l.gap, presenza: l.q && { dal: l.q.first, al: l.q.last, campioni: l.q.hits, due_lati: l.q.conflict }, dubbi: l.state === 'tolto' || l.state === 'contesa' ? [] : doubtsOf(S.issued.find((x) => x.id === l.id)) })),
+    risincronizzazioni: S.resyncs, riepilogo: summary, revisioneCompleta: $('reviewedChk').checked, campioni: S.samples, msPerCampione: Math.round(avgMs()), note: S.notes.slice(-60),
   };
   $('report').value = JSON.stringify(rep);
 }
@@ -699,7 +772,7 @@ function playStatus() {
   if (st.isFinished) return 'Partita finita · ' + teamName(st.winner) + ' ' + st.setsWon(st.winner) + '–' + st.setsWon(other(st.winner));
   if (sc.mode === 'idle') return 'Premi «Via» a inizio set · batte ' + teamName(st.serving);
   if (sc.mode === 'awaitingFirst') return 'Aspetto la prima battuta di ' + teamName(st.serving);
-  return 'Set ' + st.currentSet + ' · batte ' + teamName(st.serving) + (sc.autoApply ? '' : ' · punti automatici spenti');
+  return 'Set ' + st.currentSet + ' · batte ' + teamName(st.serving) + (sc.autoApply ? '' : ' · punti automatici spenti') + (S.doubtCount ? ' · ⚠ ' + S.doubtCount + ' da controllare' : '');
 }
 function updateHud() {
   if (!L.on) return;
@@ -723,7 +796,10 @@ function announce(sc) {
     const st = S.engine.state;
     for (let i = L.logLen; i < n; i++) {
       const e = sc.log[i];
-      if (e.action === 'punto') toast('Punto automatico: ' + teamName(e.side) + ' · ' + st.pointsA + '–' + st.pointsB);
+      if (e.action === 'punto') {
+        const d = pointDoubts({ time: e.time, gap: e.gap, q: null });
+        toast('Punto automatico: ' + teamName(e.side) + ' · ' + st.pointsA + '–' + st.pointsB + (d.length ? ' · ⚠ da controllare' : ''));
+      }
       else if (e.action === 'prima-battuta') toast('Prima battuta vista: si parte');
       else if (e.action === 'contesa') toast(e.side ? 'Contesa: punto tolto' : 'Contesa: la prossima battuta non vale');
       else if (e.action === 'ignorata') toast('Battuta ignorata (lato sbagliato)');
@@ -826,4 +902,4 @@ document.addEventListener('visibilitychange', () => { note('pagina ' + document.
 if (store.snapshot && store.snapshot.events && store.snapshot.events.length) $('resumeBtn').hidden = false;
 $('resumeBtn').onclick = () => startMatch(store.snapshot);
 
-window.__vl = { S, L, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };
+window.__vl = { S, L, refreshAll, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };

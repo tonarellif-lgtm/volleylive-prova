@@ -77,6 +77,10 @@ th,td{padding:5px 4px;text-align:left;border-bottom:1px solid var(--line)}
 th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.setend td{border-bottom:2px solid var(--fg)}
+tr.doubt td{background:rgba(245,166,35,.16)}
+.why{color:#b86e00;font-weight:600}
+@media (prefers-color-scheme:dark){.why{color:#ffb347}}
+#accStats{margin:6px 0 0}
 td .tA{color:var(--teamA);font-weight:700} td .tB{color:var(--teamB);font-weight:700}
 .bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
 .bar>i{display:block;height:100%;width:0;background:var(--accent)}
@@ -151,8 +155,9 @@ body.live{overflow:hidden;overscroll-behavior:none}
 #live button.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
 #live button:disabled{opacity:.4}
 #hudToast{
-  position:absolute;left:50%;top:calc(max(8px,env(safe-area-inset-top,0px)) + 52px);transform:translateX(-50%);
-  pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+  /* centrato nello spazio a destra del tabellone disegnato nell'immagine (--sb-right), così non lo copre */
+  position:absolute;left:calc((var(--sb-right,0px) + 100vw) / 2);top:calc(max(8px,env(safe-area-inset-top,0px)) + 52px);transform:translateX(-50%);
+  pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:calc(100vw - var(--sb-right,0px) - 24px);overflow:hidden;text-overflow:ellipsis;
 }
 #hudToast.show{opacity:1}
 .rotate-hint{display:none}
@@ -179,8 +184,9 @@ body.live{overflow:hidden;overscroll-behavior:none}
   #hudA,#hudB{width:100%;min-height:84px;flex-direction:row;gap:10px}
   .hb.team small{max-width:40vw}
   .hud-act{width:100%}
-  .hud-act .hb{flex:1}
+  .hud-act .hb{flex:1;min-width:0;padding:0 6px;font-size:.92rem}
   .hud-top{flex-wrap:wrap}
+  #hudToast{left:50%;max-width:92vw}
   .hud-status{order:2;flex:1 1 100%;max-width:100%!important;align-items:center}
   #live[data-phase="cal"] .hud-status{position:static;max-width:100%;align-items:center}
   #live[data-phase="cal"] .hud-status .pill{white-space:normal;max-width:100%}
@@ -222,8 +228,8 @@ body.live{overflow:hidden;overscroll-behavior:none}
   <div class="row">
     <label>Qualità camera
       <select id="resSel">
-        <option value="1280x720" selected>720p</option>
-        <option value="1920x1080">1080p (più nitida, più lenta)</option>
+        <option value="1920x1080" selected>1080p (consigliata: giocatrici più nitide)</option>
+        <option value="1280x720">720p (più leggera, se il telefono scatta)</option>
       </select>
     </label>
     <label>Modello
@@ -334,8 +340,10 @@ body.live{overflow:hidden;overscroll-behavior:none}
 
 <section class="card" id="secReview" hidden>
   <h2>Revisione dei punti</h2>
-  <p class="hint">Tocca ▶︎ per rivedere il momento nel video, ⇄ per dare il punto all'altra squadra, ✕ per toglierlo.</p>
+  <p class="hint">Tocca ▶︎ per rivedere il momento nel video, ⇄ per dare il punto all'altra squadra, ✕ per toglierlo. Le righe con ⚠ sono i punti di cui il riconoscimento è meno sicuro: riguardali e, se il punto è giusto, tocca ✓.</p>
   <div style="overflow:auto"><table id="revTable"><thead><tr><th>#</th><th>Ora</th><th>Set</th><th>Punto</th><th>Dopo</th><th></th></tr></thead><tbody></tbody></table></div>
+  <p class="stats" id="accStats"></p>
+  <div class="row"><label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="reviewedChk"> Ho riguardato tutti i punti</label></div>
   <div class="row"><button id="copyBtn" class="small">Copia il rapporto</button></div>
   <p class="stats" id="copyMsg"></p>
   <textarea id="report" readonly rows="8" aria-label="Rapporto"></textarea>
@@ -361,6 +369,7 @@ body.live{overflow:hidden;overscroll-behavior:none}
     <div class="hud-act" id="hudAct" hidden>
       <button id="hudVia" class="hb primary">Via</button>
       <button id="hudContesa" class="hb">Contesa</button>
+      <button id="hudScore" class="hb">Punteggio</button>
       <button id="hudUndo" class="hb">Annulla</button>
     </div>
     <button id="hudB" class="hb team b" hidden></button>

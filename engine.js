@@ -126,7 +126,9 @@ export class MatchState {
 
 // ---------------------------------------------------------------- motore a registro eventi
 
-/** Registro eventi + stato derivato. Ogni evento ha un "meta": { time, auto } (secondi dall'inizio della ripresa). */
+const mkMeta = (m) => ({ time: m.time ?? null, auto: !!m.auto, ...(m.id != null ? { id: m.id } : {}) });
+
+/** Registro eventi + stato derivato. Ogni evento ha un "meta": { time, auto, id? } (secondi dall'inizio della ripresa). */
 export class ScoreEngine {
   constructor(config, snapshot = null) {
     this.config = config;
@@ -148,7 +150,7 @@ export class ScoreEngine {
     if (!next.apply(ev)) return false;
     this.state = next;
     this.events.push({ ...ev });
-    this.meta.push({ time: meta.time ?? null, auto: !!meta.auto });
+    this.meta.push(mkMeta(meta));
     return true;
   }
   /** Annulla l'ultimo evento; restituisce { event, meta } oppure null. */
@@ -185,7 +187,7 @@ export class ScoreEngine {
   insertEvent(i, event, meta = { time: null, auto: false }) {
     if (i < 0 || i > this.events.length) return false;
     const ev = this.events.slice(), mt = this.meta.slice();
-    ev.splice(i, 0, { ...event }); mt.splice(i, 0, { time: meta.time ?? null, auto: !!meta.auto });
+    ev.splice(i, 0, { ...event }); mt.splice(i, 0, mkMeta(meta));
     return this._tryReplace(ev, mt);
   }
   /**
@@ -264,12 +266,15 @@ export class ServeTracker {
     this.mergeGap = opts.mergeGap ?? 12;
     this.confirmSec = opts.confirmSec ?? 1;
     this.dropoutSec = opts.dropoutSec ?? 2.5;
+    this.conflictSec = opts.conflictSec ?? 3;     // presenze sui due lati a meno di tanti secondi: una delle due è probabilmente sbagliata
     this.reset();
   }
   reset() {
     this.ends = { [FIRST]: this._fresh(), [SECOND]: this._fresh() };
   }
-  _fresh() { return { anchor: null, cand: null, contStart: null, emitted: true }; }
+  _fresh() { return { anchor: null, cand: null, contStart: null, emitted: true, q: null }; }
+  /** Qualità (viva: continua ad aggiornarsi finché la presenza dura) dell'ultimo avvistamento di un lato. */
+  statsFor(end) { return this.ends[end].q; }
 
   /** @param {number} t secondi  @param {{first:boolean, second:boolean}} occ  @returns {Array<{end:string,time:number}>} */
   observe(t, occ) {
@@ -280,15 +285,22 @@ export class ServeTracker {
       if (st.anchor === null || t - st.anchor > this.mergeGap) {
         // presenza nuova: comincia un possibile avvistamento
         st.cand = t; st.contStart = t; st.emitted = this.confirmSec <= 0;
+        st.q = { first: t, last: t, hits: 1, conflict: false };
         if (st.emitted) out.push({ end, time: t });
-      } else if (!st.emitted) {
-        if (t - st.anchor > this.dropoutSec) {
-          // seconda presenza (preparazione + battuta) dentro la finestra: conferma
-          st.emitted = true; out.push({ end, time: st.cand });
-        } else if (t - st.contStart >= this.confirmSec) {
-          st.emitted = true; out.push({ end, time: st.cand });   // presenza continua abbastanza a lungo
+      } else {
+        st.q.hits++; st.q.last = t;
+        if (!st.emitted) {
+          if (t - st.anchor > this.dropoutSec) {
+            // seconda presenza (preparazione + battuta) dentro la finestra: conferma
+            st.emitted = true; out.push({ end, time: st.cand });
+          } else if (t - st.contStart >= this.confirmSec) {
+            st.emitted = true; out.push({ end, time: st.cand });   // presenza continua abbastanza a lungo
+          }
         }
       }
+      // presenza anche sull'altro lato nello stesso momento: di solito una delle due è un riconoscimento sbagliato
+      const opp = this.ends[end === FIRST ? SECOND : FIRST];
+      if (opp.anchor !== null && Math.abs(t - opp.anchor) <= this.conflictSec) { st.q.conflict = true; if (opp.q) opp.q.conflict = true; }
       st.anchor = t;
     }
     return out;
@@ -314,6 +326,8 @@ export class AutoScorer {
     this.log = [];                   // { time, end, action, side, note }
     this.mismatches = 0;
     this.autoApply = opts.autoApply ?? true;   // false: l'avvistamento viene solo registrato come proposta
+    this.seq = opts.seqStart ?? 0;             // ultimo id assegnato a un punto automatico
+    this.lastSight = null;                     // orario dell'ultimo avvistamento preso in considerazione
   }
   /** Lato della squadra che sta in un lato del campo adesso. */
   static sideAt(end, state) { return end === FIRST ? state.leftSide : state.rightSide; }
@@ -330,6 +344,7 @@ export class AutoScorer {
     this.pendingContesa = false;
     this.lastAutoCount = null;
     this.mismatches = 0;
+    this.lastSight = null;
     this._log(time, null, 'via', engine.state.serving, 'Set ' + engine.state.currentSet + ': in attesa della prima battuta');
     return true;
   }
@@ -349,6 +364,7 @@ export class AutoScorer {
     const st = engine.state;
     if (this.mode === 'idle' || st.isFinished) return null;
     const side = AutoScorer.sideAt(s.end, st);
+    const gap = this.lastSight === null ? null : s.time - this.lastSight;   // secondi dall'avvistamento precedente
 
     if (this.mode === 'awaitingFirst') {
       if (side !== st.serving) {                // non è chi dovrebbe battare: rumore o battuta indicata male
@@ -356,23 +372,30 @@ export class AutoScorer {
         return this._log(s.time, s.end, 'ignorata', side, 'prima battuta dal lato sbagliato (' + this.mismatches + ')');
       }
       this.mode = 'tracking';
+      this.lastSight = s.time;
       return this._log(s.time, s.end, 'prima-battuta', side, 'si parte');
     }
 
     // tracking
     if (this.pendingContesa) {
       this.pendingContesa = false;
+      this.lastSight = s.time;
       return this._log(s.time, s.end, 'contesa', side, 'azione da ripetere: nessun punto');
     }
     if (!this.autoApply) return this._log(s.time, s.end, 'proposta', side, 'punto automatico spento');
     const before = st.currentSet, beforeFinished = st.isFinished;
-    if (!engine.apply({ type: 'point', side }, { time: s.time, auto: true })) return null;
+    const id = this.seq + 1;
+    if (!engine.apply({ type: 'point', side }, { time: s.time, auto: true, id })) return null;
+    this.seq = id;
+    this.lastSight = s.time;
     this.lastAutoCount = engine.events.length;
     const ns = engine.state;
     let note = '';
     if (ns.isFinished && !beforeFinished) { this.mode = 'idle'; note = 'partita finita'; }
     else if (ns.currentSet !== before) { this.mode = 'idle'; note = 'set finito: premi Via per il prossimo'; }
-    return this._log(s.time, s.end, 'punto', side, note);
+    const e = this._log(s.time, s.end, 'punto', side, note);
+    e.id = id; e.gap = gap; e.q = this.tracker.statsFor(s.end);      // q è «viva»: continua ad aggiornarsi finché la presenza dura
+    return e;
   }
 
   /**
@@ -383,7 +406,8 @@ export class AutoScorer {
     if (this.mode === 'tracking' && this.lastAutoCount !== null && engine.events.length === this.lastAutoCount) {
       const undone = engine.undo();
       this.lastAutoCount = null;
-      this._log(time, null, 'contesa', undone && undone.event.side, 'tolto l\'ultimo punto automatico');
+      const e = this._log(time, null, 'contesa', undone && undone.event.side, 'tolto l\'ultimo punto automatico');
+      if (undone && undone.meta.id != null) e.undoneId = undone.meta.id;
       return 'tolto';
     }
     this.pendingContesa = true;
@@ -396,4 +420,60 @@ export class AutoScorer {
     this.log.push(e);
     return e;
   }
+}
+
+// ---------------------------------------------------------------- punti dubbi e misura della precisione
+
+export const DOUBT_DEFAULTS = {
+  minGap: 4,        // s: due avvistamenti a meno di così sono quasi sempre uno solo (tra due battute passano l'azione e il recupero palla)
+  minSpan: 1,       // s: chi batte sta in zona qualche secondo; una presenza di un solo campione è di solito qualcuno che passa
+  settle: 3,        // s: prima di giudicare la durata si aspetta che la presenza sia finita
+  sampleStep: 0,    // s tra un campione e l'altro: se è almeno minSpan la durata non si può misurare e quel controllo si salta
+};
+
+/**
+ * Motivi per cui un punto automatico merita un controllo (soglie provvisorie: tarate a occhio sul V3 e da rivedere
+ * quando ci saranno partite corrette a mano). `entry` è una voce 'punto' del registro (time, gap, q);
+ * `opts.nextTime` è l'orario dell'avvistamento successivo (se è troppo vicino, sono sospetti entrambi);
+ * `now` serve a non giudicare la durata finché la presenza è ancora in corso; `opts.sampleStep` è il passo di campionamento
+ * (con un campione ogni 2 s una presenza di un solo campione è normale: la durata non dice niente).
+ * Il contrasto tra i due lati (q.conflict) si registra ma non segnala: nel V3 riguarda più di metà dei punti.
+ */
+export function pointDoubts(entry, now = Infinity, opts = {}) {
+  const o = { ...DOUBT_DEFAULTS, ...opts }, out = [];
+  if (!entry) return out;
+  const near = (entry.gap !== null && entry.gap !== undefined && entry.gap < o.minGap)
+    || (o.nextTime !== null && o.nextTime !== undefined && o.nextTime - entry.time < o.minGap);
+  if (near) out.push('ravvicinato');
+  const q = entry.q;
+  if (q && o.sampleStep < o.minSpan && (q.done || now - q.last >= o.settle) && q.last - q.first < o.minSpan) out.push('presenza breve');
+  return out;
+}
+
+/**
+ * Che fine ha fatto ogni punto automatico emesso. `issued`: [{ id, side, ... }]; `timeline`: engine.timeline();
+ * `neutralIds`: id tolti dal tasto Contesa (non sono errori). Stati:
+ *  invertito | tolto | contesa | non toccato (cioè: ancora lì come l'aveva dato il riconoscimento)
+ * `manual`: i punti dati a mano (non automatici) ancora presenti: sono ciò che il riconoscimento non ha visto (o ha dato male).
+ */
+export function labelPoints(issued, timeline, neutralIds = []) {
+  const byId = new Map();
+  for (const r of timeline) if (r.event.type === 'point' && r.meta.id != null) byId.set(r.meta.id, r);
+  const neutral = new Set(neutralIds);
+  const labels = issued.map((it) => {
+    const r = byId.get(it.id);
+    let state;
+    if (!r) state = neutral.has(it.id) ? 'contesa' : 'tolto';
+    else state = r.event.side === it.side ? 'non toccato' : 'invertito';
+    return { ...it, state, set: r ? r.set : null };
+  });
+  const manual = timeline.filter((r) => r.event.type === 'point' && !r.meta.auto).length;
+  const count = (st) => labels.filter((l) => l.state === st).length;
+  return {
+    labels,
+    summary: {
+      auto: issued.length, nonToccati: count('non toccato'), invertiti: count('invertito'), tolti: count('tolto'),
+      contesa: count('contesa'), manuali: manual,
+    },
+  };
 }

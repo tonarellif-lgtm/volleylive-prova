@@ -7,7 +7,8 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
 
 0. **Tutto schermo**: «Avvia la camera» apre subito la ripresa a tutto schermo, con i tasti sopra l'immagine:
    +1 per squadra ai lati, Via / Contesa / Annulla in basso, REC, «⋯» (punteggio del set, punti automatici,
-   registrazione salvata, chiudi la partita) e ✕ per tornare alla pagina. Funziona in orizzontale e in verticale.
+   registrazione salvata, chiudi la partita) e ✕ per tornare alla pagina. «Punteggio» (accanto a Via, Contesa e Annulla)
+   serve a risincronizzarsi al volo: si scrive il punteggio del tabellone dell'arbitro, per esempio 12-9. Funziona in orizzontale e in verticale.
    Su iPhone Safari non esiste lo schermo intero vero per le pagine web: la pagina riempie l'area visibile e nasconde
    la propria interfaccia; per far sparire anche la barra di Safari: Condividi → «Aggiungi alla schermata Home» e
    aprirla da lì. Dove il browser lo permette (Android, iPad, computer) compare anche ⛶ per lo schermo intero.
@@ -27,6 +28,23 @@ Rilevatore di persone YOLOX-nano (3,6 MB) con onnxruntime-web, solo sui due rita
 circa 2-3 campioni al secondo. Una persona conta se ha i piedi nella zona e l'altezza compatibile con quel punto
 (distanza dalla linea dell'orizzonte del campo). Due presenze vicine sullo stesso lato (la giocatrice entra con la
 palla, poi batte) sono la stessa battuta.
+
+## Misurare la precisione
+
+La camera parte a 1080p (le giocatrici lontane hanno più pixel; il costo del riconoscimento è lo stesso perché i ritagli
+delle due zone di battuta hanno sempre la stessa dimensione; la calibrazione dei 4 angoli va rifatta una volta se prima
+si usava 720p). Nella partita:
+
+- Ogni punto automatico ha un numero. A fine partita la tabella di revisione dice che fine ha fatto: **lasciato**,
+  **invertito** (⇄), **tolto** (✕), tolto dalla **contesa**; i punti dati a mano sono quelli che il riconoscimento non ha visto.
+- I punti con ⚠ sono quelli meno sicuri: avvistamento a meno di 4 s dall'altro, oppure persona vista meno di 1 s
+  (solo con campioni fitti: con un campione ogni secondo o più la durata non si giudica). Se il punto è giusto si tocca ✓.
+  Le soglie sono provvisorie (tarate a occhio su una sola partita): servono le partite corrette a mano per sistemarle.
+- «Ho riguardato tutti i punti» + «Copia il rapporto» dà un rapporto (versione 2) con l'etichetta di ogni punto
+  (`etichette`), il conteggio (`riepilogo`), le risincronizzazioni fatte col tasto Punteggio (`risincronizzazioni`:
+  dopo una risincronizzazione le etichette sono meno sicure, perché togliere i punti «in più» non dice quali fossero
+  sbagliati) e, per ogni punto, quanto era vicino all'altro avvistamento e quanto è durata la presenza.
+- Un punto «lasciato» ma mai riguardato non è un punto giusto: il numero di precisione vale solo se la spunta c'è.
 
 ## Limiti noti
 
