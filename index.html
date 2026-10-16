@@ -7,12 +7,12 @@
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Prova VolleyLive">
+<meta name="apple-mobile-web-app-title" content="VolleyLive">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0d1117">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Prova VolleyLive web</title>
+<title>VolleyLive</title>
 <style>
 :root{
   --bg:#f3f5f8; --card:#ffffff; --fg:#0f1722; --muted:#5b6778; --line:#d5dce5;
@@ -30,676 +30,196 @@ html{-webkit-text-size-adjust:100%}
 body{
   margin:0;background:var(--bg);color:var(--fg);
   font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px))
-          max(28px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  padding:max(14px,env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px))
+          max(28px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
 }
-main{max-width:560px;margin:0 auto;display:grid;gap:14px}
-h1{font-size:1.45rem;line-height:1.2;margin:4px 0 2px}
+main{max-width:640px;margin:0 auto;display:grid;gap:12px}
+h1{font-size:1.4rem;line-height:1.2;margin:4px 0 2px}
 h2{font-size:1.05rem;margin:0}
-h3{font-size:.8rem;margin:6px 0 0;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+h3{font-size:.78rem;margin:4px 0 0;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 p{margin:0}
-.sub{color:var(--muted);font-size:.9rem}
-.hint{color:var(--muted);font-size:.88rem}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.sub,.hint{color:var(--muted);font-size:.88rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:10px;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
 .row>*{min-width:0}
-label{display:grid;gap:4px;font-size:.82rem;color:var(--muted);flex:1 1 140px}
-label.check{display:flex;align-items:center;gap:8px;flex:0 0 auto;font-size:.95rem;color:var(--fg)}
-select,input[type=text]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 10px;width:100%}
-input[type=checkbox]{width:20px;height:20px}
+label{display:grid;gap:4px;font-size:.8rem;color:var(--muted);flex:1 1 130px}
+select,input[type=text],input[type=number],textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;min-height:44px;padding:0 10px;width:100%}
+textarea{padding:8px 10px;font:.8rem/1.4 var(--mono);min-height:0}
+input[type=color]{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:2px}
+input[type=range]{width:100%}
 button,.btn{
-  font:inherit;font-weight:500;min-height:46px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
-  background:var(--card);color:var(--fg);display:inline-flex;align-items:center;justify-content:center;
-  text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  font:inherit;font-weight:500;min-height:46px;padding:0 14px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);color:var(--fg);display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
 }
+button:disabled{opacity:.45;cursor:default}
 button.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent;font-weight:600}
 button.rec{background:var(--rec);color:#fff;border-color:transparent;font-weight:600}
-button.big{min-height:68px;font-size:1.2rem;font-weight:700;color:#fff;border-color:transparent;flex:1 1 140px}
+button.big{min-height:64px;font-size:1.05rem;font-weight:700;flex:1 1 140px;color:#fff;border:0}
 button.big.a{background:var(--teamA)} button.big.b{background:var(--teamB)}
-button:disabled{opacity:.4;cursor:default}
+button.small{min-height:36px;padding:0 10px;font-size:.85rem}
+button.on{outline:3px solid var(--accent);outline-offset:1px}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
-.checks li{display:flex;gap:10px;align-items:baseline;font-size:.92rem;min-width:0}
-.checks .chip{flex:0 0 auto;min-width:40px;text-align:center;font:600 .72rem var(--mono);padding:3px 6px;border-radius:6px;border:1px solid currentColor}
-.chip.ok{color:var(--ok)} .chip.no{color:var(--bad)} .chip.q{color:var(--warn)}
-.checks .txt{min-width:0;overflow-wrap:anywhere}
-.checks .det{color:var(--muted)}
-canvas{width:100%;height:auto;display:block;border-radius:10px;background:#000}
-.stats{font:.82rem var(--mono);color:var(--muted);min-height:1.2em;overflow-wrap:anywhere}
-#src{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none}
-#playback{width:100%;border-radius:10px;background:#000;max-height:60vh}
-textarea{font:.74rem/1.4 var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;resize:vertical}
-.team-in{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mode{display:inline-block;font:600 .72rem var(--mono);padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.stage{position:relative;background:#000;border-radius:10px;overflow:hidden;line-height:0}
+.stage canvas{width:100%;height:auto;display:block}
+#ov{position:absolute;left:0;top:0;touch-action:none}
+.stats{font:.8rem var(--mono);color:var(--muted);min-height:1.2em;overflow-wrap:anywhere;white-space:pre-wrap}
 .stats:empty{display:none}
-.stack{display:grid;gap:10px}
+.chip{display:inline-block;font:600 .74rem var(--mono);padding:3px 9px;border-radius:999px;border:1px solid currentColor}
+.chip.ok{color:var(--ok)} .chip.no{color:var(--bad)} .chip.q{color:var(--warn)} .chip.mut{color:var(--muted)}
+#autoState{font-size:1.02rem;font-weight:600}
+.team-in{display:grid;grid-template-columns:1fr 70px;gap:8px}
+.team-in2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.list{display:grid;gap:4px;max-height:260px;overflow:auto;font:.82rem var(--mono)}
+.list div{padding:3px 6px;border-radius:6px;background:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:5px 4px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.setend td{border-bottom:2px solid var(--fg)}
+td .tA{color:var(--teamA);font-weight:700} td .tB{color:var(--teamB);font-weight:700}
+.bar{height:8px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;width:0;background:var(--accent)}
 [hidden]{display:none!important}
-ol.how{margin:0;padding-left:1.2rem;display:grid;gap:4px;font-size:.92rem}
+ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <main>
 
 <header>
-  <h1>Prova VolleyLive web</h1>
-  <p class="sub"><span class="mode" id="modeChip">…</span> Pagina di prova: nessun dato lascia il telefono.</p>
+  <h1>VolleyLive</h1>
+  <p class="sub"><span class="chip mut" id="modelChip">modello non caricato</span> <span class="chip mut" id="srcChip">nessuna sorgente</span></p>
 </header>
 
-<section class="card">
-  <h2>Come si usa</h2>
-  <ol class="how">
-    <li>Guarda la sezione 1: dice cosa permette questo telefono.</li>
-    <li>Nella sezione 2 avvia la camera e prova il punteggio.</li>
-    <li>Nella sezione 3 registra almeno un minuto, poi riguardalo.</li>
-    <li>Nella sezione 4 misura se il telefono regge l'invio in diretta.</li>
-    <li>In fondo tocca «Copia rapporto» e incollalo in chat.</li>
-  </ol>
-</section>
-
-<section class="card">
-  <h2>1. Cosa permette questo telefono</h2>
-  <ul class="checks" id="checks"></ul>
-</section>
-
-<section class="card">
-  <h2>2. Camera e tabellone</h2>
+<section class="card" id="secSource">
+  <h2>1. Sorgente</h2>
   <div class="row">
-    <label>Obiettivo
-      <select id="camSel"><option value="">Posteriore (predefinito)</option></select>
-    </label>
-    <label>Qualità
+    <button id="camBtn" class="primary">Avvia la camera</button>
+    <button id="fileBtn">Apri un video registrato</button>
+    <input type="file" id="fileIn" accept="video/*" hidden>
+  </div>
+  <p class="hint">Dalla camera: appoggia il telefono in orizzontale, fermo, con tutto il campo e le due zone di battuta in vista. Dal video: nessun dato lascia il telefono.</p>
+  <div class="row">
+    <label>Qualità camera
       <select id="resSel">
         <option value="1280x720" selected>720p</option>
-        <option value="1920x1080">1080p</option>
-        <option value="640x480">480p</option>
+        <option value="1920x1080">1080p (più nitida, più lenta)</option>
+      </select>
+    </label>
+    <label>Modello
+      <select id="modelSel">
+        <option value="models/yolox_nano.onnx|416" selected>Leggero (3,6 MB)</option>
       </select>
     </label>
   </div>
-  <label class="check"><input type="checkbox" id="audioChk" checked> Con audio</label>
-  <div class="row">
-    <button id="camBtn" class="primary">Avvia camera</button>
-    <button id="camStop" disabled>Ferma camera</button>
-  </div>
-  <canvas id="cv" width="1280" height="720"></canvas>
-  <p class="stats" id="stats">Camera spenta.</p>
-  <video id="src" playsinline muted autoplay></video>
-
-  <h3>Punteggio</h3>
-  <div class="team-in">
-    <input type="text" id="nameA" value="Casa" maxlength="12" aria-label="Nome squadra A" autocomplete="off">
-    <input type="text" id="nameB" value="Ospiti" maxlength="12" aria-label="Nome squadra B" autocomplete="off">
-  </div>
-  <div class="row">
-    <button id="addA" class="big a">+1 Casa</button>
-    <button id="addB" class="big b">+1 Ospiti</button>
-  </div>
-  <div class="row">
-    <button id="undo">Annulla</button>
-    <button id="endSet">Chiudi set</button>
-    <button id="resetScore">Azzera</button>
-  </div>
 </section>
 
-<section class="card">
-  <h2>3. Registrazione</h2>
-  <p class="hint">Avvia prima la camera. Per provare la tenuta: durante la registrazione blocca lo schermo per 10 secondi, riaccendilo, poi cambia app per 10 secondi e torna qui. Gli eventi finiscono nel rapporto.</p>
-  <div class="row"><button id="recBtn" class="rec" disabled>Registra</button></div>
-  <p class="stats" id="recStats"></p>
-  <div id="result" class="stack" hidden>
-    <video id="playback" controls playsinline></video>
-    <p class="stats" id="resultInfo"></p>
-    <div class="row">
-      <button id="shareBtn">Condividi / salva</button>
-      <a id="dlLink" class="btn" href="#">Scarica il file</a>
+<section class="card" id="secStage" hidden>
+  <div class="stage">
+    <canvas id="cv" width="1280" height="720"></canvas>
+    <canvas id="ov" width="1280" height="720"></canvas>
+  </div>
+  <video id="src" playsinline muted style="position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none"></video>
+  <div id="seekRow" hidden>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posizione nel video">
+    <div class="row"><button id="playBtn" class="small">▶︎ Riproduci</button><span class="stats" id="seekTxt"></span></div>
+  </div>
+  <p class="stats" id="stats"></p>
+</section>
+
+<section class="card" id="secField" hidden>
+  <h2>2. Il campo</h2>
+  <p class="hint" id="fieldHint">Tocca i 4 angoli del campo: prima i due del fondo che chiami «lato 1» (la linea corta di 9 metri), poi i due del fondo opposto, nell'ordine 1→2 (lato 1) e 3→4 (lato 2), andando in giro. Puoi trascinare i punti per sistemarli.</p>
+  <div class="row">
+    <button id="calUndo" class="small">Togli l'ultimo</button>
+    <button id="calReset" class="small">Ricomincia</button>
+    <button id="calMeasure" class="primary" disabled>Misura le persone</button>
+  </div>
+  <label>Quale squadra sta nel lato 1 (angoli 1-2)?
+    <select id="sideSel"><option value="a">Squadra A</option><option value="b">Squadra B</option></select>
+  </label>
+  <p class="stats" id="calInfo"></p>
+</section>
+
+<section class="card" id="secMatch" hidden>
+  <h2>3. Partita</h2>
+  <div id="setup">
+    <div class="team-in"><label>Squadra A<input type="text" id="nameA" value="Casa" maxlength="14" autocomplete="off"></label><label>Colore<input type="color" id="colA" value="#2f6fed"></label></div>
+    <div class="team-in"><label>Squadra B<input type="text" id="nameB" value="Ospiti" maxlength="14" autocomplete="off"></label><label>Colore<input type="color" id="colB" value="#e8590c"></label></div>
+    <div class="team-in2">
+      <label>Batte per prima<select id="firstSel"><option value="a">Squadra A</option><option value="b">Squadra B</option></select></label>
+      <label>Formato<select id="fmtSel"><option value="3">Al meglio dei 5 set</option><option value="2">Al meglio dei 3 set</option></select></label>
     </div>
+    <button id="startMatch" class="primary">Inizia la partita</button>
+    <button id="resumeBtn" hidden>Riprendi la partita salvata</button>
+  </div>
+  <div id="play" hidden>
+    <div class="row">
+      <button id="addA" class="big a">+1 A</button>
+      <button id="addB" class="big b">+1 B</button>
+    </div>
+    <div class="row">
+      <button id="viaBtn" class="primary">Via (inizio set)</button>
+      <button id="contesaBtn">Contesa</button>
+      <button id="undoBtn">Annulla</button>
+    </div>
+    <div class="row">
+      <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="autoChk" checked> Punti automatici</label>
+      <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="debugChk" checked> Mostra cosa vede</label>
+    </div>
+    <div class="row">
+      <label style="flex:0 0 76px">Punti A<input type="number" id="scA" min="0" max="60" inputmode="numeric"></label>
+      <label style="flex:0 0 76px">Punti B<input type="number" id="scB" min="0" max="60" inputmode="numeric"></label>
+      <button id="setScoreBtn" class="small">Imposta il punteggio del set</button>
+      <button id="endMatch" class="small">Chiudi la partita</button>
+    </div>
+    <p id="autoState">—</p>
+    <div class="list" id="autoLog"></div>
   </div>
 </section>
 
-<section class="card">
-  <h2>4. Invio in diretta (simulato)</h2>
-  <p class="hint">Manda il video con il tabellone a una connessione interna al telefono, senza usare la rete. Misura se la codifica regge 30 immagini al secondo e a quale velocità dati. Serve la camera avviata.</p>
+<section class="card" id="secOffline" hidden>
+  <h2>Analisi del video registrato</h2>
+  <p class="hint">Un momento per riga, nel formato minuti:secondi. La partita parte quando premi «Via»; qui puoi indicarlo in anticipo.</p>
+  <label>Inizio dei set
+    <textarea id="armTimes" rows="3" placeholder="4:00&#10;28:45&#10;54:20" aria-label="Inizio dei set"></textarea>
+  </label>
+  <label>Contese (azioni da ripetere)
+    <textarea id="contesaTimes" rows="2" placeholder="4:35" aria-label="Contese"></textarea>
+  </label>
   <div class="row">
-    <label>Durata
-      <select id="rtcDur">
-        <option value="10">10 secondi</option>
-        <option value="20" selected>20 secondi</option>
-        <option value="60">60 secondi</option>
-      </select>
-    </label>
-    <button id="rtcBtn" disabled>Prova invio</button>
+    <label>Un campione ogni<select id="stepSel"><option value="0.5">mezzo secondo (preciso, lento)</option><option value="1" selected>1 secondo</option><option value="2">2 secondi</option></select></label>
+    <button id="analyzeBtn" class="primary">Analizza il video</button>
+    <button id="stopAnalyze" disabled>Ferma</button>
   </div>
-  <p class="stats" id="rtcStats"></p>
+  <div class="bar"><i id="anaBar"></i></div>
+  <p class="stats" id="anaTxt"></p>
 </section>
 
-<section class="card">
-  <h2>Rapporto</h2>
-  <div class="row">
-    <button id="copyBtn" class="primary">Copia rapporto</button>
-    <button id="clearBtn">Cancella eventi</button>
+<section class="card" id="secRec" hidden>
+  <h2>Registrazione</h2>
+  <p class="hint">Registra il video con il tabellone. Gli orari dei punti automatici si riferiscono all'inizio della registrazione, così nella revisione si può saltare al momento giusto.</p>
+  <div class="row"><button id="recBtn" class="rec">Registra</button></div>
+  <p class="stats" id="recStats"></p>
+  <div id="recResult" hidden class="card" style="padding:8px">
+    <video id="recPlay" controls playsinline style="width:100%;border-radius:8px;background:#000;max-height:50vh"></video>
+    <div class="row"><button id="shareBtn" class="small">Condividi / salva</button><a id="dlLink" class="btn small" href="#">Scarica</a></div>
   </div>
+</section>
+
+<section class="card" id="secReview" hidden>
+  <h2>Revisione dei punti</h2>
+  <p class="hint">Tocca ▶︎ per rivedere il momento nel video, ⇄ per dare il punto all'altra squadra, ✕ per toglierlo.</p>
+  <div style="overflow:auto"><table id="revTable"><thead><tr><th>#</th><th>Ora</th><th>Set</th><th>Punto</th><th>Dopo</th><th></th></tr></thead><tbody></tbody></table></div>
+  <div class="row"><button id="copyBtn" class="small">Copia il rapporto</button></div>
   <p class="stats" id="copyMsg"></p>
-  <textarea id="report" readonly rows="14" aria-label="Rapporto della prova"></textarea>
+  <textarea id="report" readonly rows="8" aria-label="Rapporto"></textarea>
 </section>
 
 </main>
-
-<script>
-'use strict';
-const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const t0 = performance.now();
-const logs = [];
-const checks = [];
-const results = { camera: 'non provata', record: 'non provata', rtc: 'non provata' };
-
-/* ---------- memoria tra una apertura e l'altra (per capire se la riapertura rompe qualcosa) ---------- */
-const KEY = 'vl-web-test-v1';
-function loadStore() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
-function saveStore(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* non disponibile */ } }
-const store = loadStore();
-const prev = store.last || null;
-store.launches = (store.launches || 0) + 1;
-saveStore(store);
-
-const ua = navigator.userAgent;
-const standalone = (navigator.standalone === true) || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-function remember() {
-  store.last = { when: new Date().toISOString(), mode: standalone ? 'schermata Home' : 'browser',
-                 camera: results.camera, record: results.record, rtc: results.rtc };
-  saveStore(store);
-}
-
-/* ---------- registro eventi e rapporto ---------- */
-function stamp() {
-  const s = Math.round((performance.now() - t0) / 1000);
-  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
-}
-function log(msg) { logs.push('[' + stamp() + '] ' + msg); if (logs.length > 400) logs.shift(); renderReport(); }
-function renderReport() {
-  const L = [];
-  L.push('PROVA VOLLEYLIVE WEB v1 · ' + new Date().toLocaleString('it-IT'));
-  L.push('Modo: ' + (standalone ? 'schermata Home' : 'browser') + ' · apertura n. ' + store.launches);
-  if (prev) L.push('Sessione precedente (' + prev.when + ', ' + prev.mode + '): camera=' + prev.camera +
-                   ' | registrazione=' + prev.record + ' | webrtc=' + prev.rtc);
-  L.push('Dispositivo: ' + ua);
-  L.push('Schermo: ' + screen.width + 'x' + screen.height + ' @' + devicePixelRatio + ' · finestra ' + innerWidth + 'x' + innerHeight);
-  L.push('');
-  L.push('— Compatibilità —');
-  checks.forEach(c => L.push((c.status === 'ok' ? '[OK] ' : c.status === 'no' ? '[NO] ' : '[?]  ') + c.name + (c.detail ? ': ' + c.detail : '')));
-  L.push('');
-  L.push('— Risultati —');
-  L.push('Camera: ' + results.camera);
-  L.push('Registrazione: ' + results.record);
-  L.push('Invio WebRTC: ' + results.rtc);
-  L.push('');
-  L.push('— Eventi —');
-  logs.forEach(l => L.push(l));
-  $('report').value = L.join('\n');
-}
-
-/* ---------- 1. compatibilità ---------- */
-const REC_TYPES = [
-  'video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4',
-  'video/webm;codecs=h264,opus', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'
-];
-function pickType() {
-  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
-  return REC_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || '';
-}
-function addCheck(name, status, detail) { checks.push({ name, status, detail: detail || '' }); }
-function runChecks() {
-  const md = navigator.mediaDevices;
-  const m = ua.match(/OS (\d+)[_.](\d+)/);
-  addCheck('Sistema', 'q', (/iPhone|iPad/.test(ua) ? 'iOS ' + (m ? m[1] + '.' + m[2] : '?') : 'non è un iPhone') +
-           ' · ' + (standalone ? 'aperta dalla schermata Home' : 'aperta nel browser'));
-  addCheck('Pagina sicura (https)', window.isSecureContext ? 'ok' : 'no', location.protocol.replace(':', ''));
-  addCheck('Camera e microfono', md && md.getUserMedia ? 'ok' : 'no');
-  const hasMR = typeof MediaRecorder !== 'undefined';
-  const rt = pickType();
-  addCheck('Registrazione del video', hasMR && rt ? 'ok' : (hasMR ? 'q' : 'no'), rt || 'nessun formato');
-  addCheck('Disegno sul video (canvas)', HTMLCanvasElement.prototype.captureStream ? 'ok' : 'no');
-  addCheck('Schermo sempre acceso', 'wakeLock' in navigator ? 'ok' : 'no');
-  let canShare = false;
-  try { canShare = !!(navigator.canShare && navigator.canShare({ files: [new File(['x'], 'a.mp4', { type: 'video/mp4' })] })); } catch (e) { /* no */ }
-  addCheck('Salvataggio con Condividi', canShare ? 'ok' : 'no');
-  addCheck('Invio WebRTC', typeof RTCPeerConnection !== 'undefined' ? 'ok' : 'no');
-  addCheck('Codificatore video (WebCodecs)', typeof VideoEncoder !== 'undefined' ? 'ok' : 'no');
-  addCheck('Conteggio immagini della camera', HTMLVideoElement.prototype.requestVideoFrameCallback ? 'ok' : 'q', 'requestVideoFrameCallback');
-  addCheck('Blocco orientamento da pagina', (screen.orientation && screen.orientation.lock) ? 'q' : 'no', 'di solito assente su iPhone');
-  const list = $('checks');
-  list.textContent = '';
-  checks.forEach(c => {
-    const li = document.createElement('li');
-    const chip = document.createElement('span');
-    chip.className = 'chip ' + (c.status === 'ok' ? 'ok' : c.status === 'no' ? 'no' : 'q');
-    chip.textContent = c.status === 'ok' ? 'OK' : c.status === 'no' ? 'NO' : 'INFO';
-    const txt = document.createElement('span');
-    txt.className = 'txt';
-    txt.textContent = c.name;
-    if (c.detail) { const d = document.createElement('span'); d.className = 'det'; d.textContent = ' · ' + c.detail; txt.appendChild(d); }
-    li.append(chip, txt);
-    list.appendChild(li);
-  });
-  $('modeChip').textContent = standalone ? 'schermata Home' : 'browser';
-}
-
-/* ---------- punteggio e tabellone ---------- */
-const state = { names: ['Casa', 'Ospiti'], pts: [0, 0], sets: [0, 0], serve: 0, hist: [] };
-function snap() {
-  state.hist.push(JSON.stringify({ pts: state.pts, sets: state.sets, serve: state.serve }));
-  if (state.hist.length > 300) state.hist.shift();
-}
-function addPoint(i) { snap(); state.pts[i]++; state.serve = i; }
-function undo() { const s = state.hist.pop(); if (s) Object.assign(state, JSON.parse(s)); }
-function endSet() {
-  const [a, b] = state.pts;
-  if (a === b) return;
-  snap();
-  if (a > b) state.sets[0]++; else state.sets[1]++;
-  state.pts = [0, 0];
-}
-function resetScore() { state.pts = [0, 0]; state.sets = [0, 0]; state.serve = 0; state.hist = []; }
-function syncNames() {
-  state.names[0] = $('nameA').value.trim() || 'Casa';
-  state.names[1] = $('nameB').value.trim() || 'Ospiti';
-  $('addA').textContent = '+1 ' + state.names[0];
-  $('addB').textContent = '+1 ' + state.names[1];
-}
-
-const cv = $('cv');
-const ctx = cv.getContext('2d');
-function rr(c, x, y, w, h, r) {
-  c.beginPath(); c.moveTo(x + r, y);
-  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
-  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
-}
-const FONT = '-apple-system, "Helvetica Neue", Arial, sans-serif';
-function drawBoard() {
-  const k = Math.max(cv.width, cv.height) / 1280;   // il tabellone ha la stessa dimensione relativa in orizzontale e in verticale
-  const x = 24 * k, y = 24 * k, w = 340 * k, hh = 34 * k, rh = 52 * k;
-  const colors = ['#2f6fed', '#e8590c'];
-  ctx.save();
-  ctx.fillStyle = 'rgba(8,12,18,0.84)';
-  rr(ctx, x, y, w, hh + 2 * rh, 10 * k); ctx.fill();
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '700 ' + (15 * k) + 'px ' + FONT;
-  ctx.textAlign = 'left';
-  ctx.fillText('SET ' + (state.sets[0] + state.sets[1] + 1), x + 14 * k, y + hh / 2);
-  const p = state.pts;
-  const badge = (p[0] >= 24 && p[0] > p[1]) || (p[1] >= 24 && p[1] > p[0]) ? 'SET POINT' : '';
-  if (badge) {
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffd43b';
-    ctx.fillText(badge, x + w - 14 * k, y + hh / 2);
-  }
-  for (let i = 0; i < 2; i++) {
-    const ry = y + hh + i * rh;
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fillRect(x + 10 * k, ry, w - 20 * k, 1 * k);
-    ctx.fillStyle = colors[i];
-    rr(ctx, x + 12 * k, ry + 12 * k, 8 * k, rh - 24 * k, 3 * k); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
-    ctx.font = '700 ' + (22 * k) + 'px ' + FONT;
-    ctx.fillText(state.names[i].toUpperCase(), x + 30 * k, ry + rh / 2 + 1 * k);
-    if (state.serve === i) {
-      ctx.fillStyle = '#ffd43b';
-      ctx.beginPath(); ctx.arc(x + w - 118 * k, ry + rh / 2, 5 * k, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    rr(ctx, x + w - 102 * k, ry + 8 * k, 34 * k, rh - 16 * k, 6 * k); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
-    ctx.font = '700 ' + (22 * k) + 'px ' + FONT;
-    ctx.fillText(String(state.sets[i]), x + w - 85 * k, ry + rh / 2 + 1 * k);
-    ctx.fillStyle = '#fff';
-    rr(ctx, x + w - 62 * k, ry + 6 * k, 50 * k, rh - 12 * k, 6 * k); ctx.fill();
-    ctx.fillStyle = '#0b0f14';
-    ctx.font = '800 ' + (28 * k) + 'px ' + FONT;
-    ctx.fillText(String(p[i]), x + w - 37 * k, ry + rh / 2 + 1 * k);
-  }
-  ctx.restore();
-}
-
-/* ---------- camera ---------- */
-const video = $('src');
-let camStream = null, outStream = null, wl = null;
-let vFrames = 0, dFrames = 0, lastStat = performance.now(), lastDraw = performance.now();
-let camFps = 0, drawFps = 0, lowSecs = 0, recording = false;
-
-function setCanvasSize(w, h) {
-  w = Math.max(2, Math.round(w / 2) * 2); h = Math.max(2, Math.round(h / 2) * 2);
-  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
-}
-function draw() {
-  requestAnimationFrame(draw);
-  const now = performance.now();
-  if (camStream && now - lastDraw > 2000) log('disegno ripreso dopo ' + ((now - lastDraw) / 1000).toFixed(1) + ' s di pausa');
-  lastDraw = now;
-  const cw = cv.width, ch = cv.height, vw = video.videoWidth, vh = video.videoHeight;
-  ctx.fillStyle = '#0d141c'; ctx.fillRect(0, 0, cw, ch);
-  if (camStream && vw && vh) {
-    const s = Math.min(cw / vw, ch / vh);            // l'immagine intera, con bande nere se il formato cambia
-    ctx.drawImage(video, (cw - vw * s) / 2, (ch - vh * s) / 2, vw * s, vh * s);
-  } else {
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.font = '600 ' + (28 * Math.max(cw, ch) / 1280) + 'px ' + FONT;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Camera spenta', cw / 2, ch / 2);
-  }
-  drawBoard();
-  dFrames++;
-}
-if (video.requestVideoFrameCallback) {
-  video.requestVideoFrameCallback(function cb() { vFrames++; video.requestVideoFrameCallback(cb); });
-}
-function tracksInfo() {
-  return camStream ? ' · tracce: ' + camStream.getTracks().map(t => t.kind[0] + ':' + t.readyState + (t.muted ? '(muta)' : '')).join(' ') : '';
-}
-
-async function keepAwake() {
-  try {
-    if (!('wakeLock' in navigator)) { log('schermo: Wake Lock non disponibile'); return; }
-    if (document.visibilityState !== 'visible') return;
-    wl = await navigator.wakeLock.request('screen');
-    wl.addEventListener('release', () => log('schermo: blocco dello spegnimento rilasciato'));
-    log('schermo: resta acceso (Wake Lock attivo)');
-  } catch (e) { log('schermo: Wake Lock rifiutato (' + e.name + ')'); }
-}
-
-async function fillCameras(currentId) {
-  try {
-    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
-    const sel = $('camSel');
-    sel.textContent = '';
-    const def = document.createElement('option'); def.value = ''; def.textContent = 'Posteriore (predefinito)'; sel.appendChild(def);
-    devs.forEach((d, i) => {
-      const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || ('Camera ' + (i + 1)); sel.appendChild(o);
-    });
-    if (currentId && devs.some(d => d.deviceId === currentId)) sel.value = currentId;
-    log('obiettivi trovati: ' + (devs.map(d => d.label || '?').join(' | ') || 'nessuno'));
-  } catch (e) { log('elenco obiettivi: ' + e.name); }
-}
-
-async function startCamera() {
-  if (camStream) stopCamera(true);
-  const [w, h] = $('resSel').value.split('x').map(Number);
-  const dev = $('camSel').value;
-  const vc = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 30 } };
-  if (dev) vc.deviceId = { exact: dev }; else vc.facingMode = { ideal: 'environment' };
-  const ac = $('audioChk').checked ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false } : false;
-  $('camBtn').disabled = true;
-  try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: ac });
-  } catch (e) {
-    camStream = null;
-    results.camera = 'errore ' + e.name; remember();
-    log('camera: errore ' + e.name + ' · ' + e.message);
-    $('stats').textContent = 'Camera non disponibile: ' + e.name;
-    $('camBtn').disabled = false;
-    return;
-  }
-  video.srcObject = camStream;
-  try { await video.play(); } catch (e) { log('anteprima: play() rifiutato (' + e.name + ')'); }
-  if (!video.videoWidth) {
-    await Promise.race([new Promise(r => { video.onloadedmetadata = r; }), sleep(4000)]);
-  }
-  setCanvasSize(video.videoWidth || w, video.videoHeight || h);
-  const vt = camStream.getVideoTracks()[0];
-  const s = vt.getSettings();
-  log('camera avviata: ' + s.width + 'x' + s.height + ' a ' + Math.round(s.frameRate || 0) + ' fps · ' + (vt.label || 'senza nome') +
-      (s.facingMode ? ' (' + s.facingMode + ')' : '') + ' · video ' + video.videoWidth + 'x' + video.videoHeight);
-  try {
-    const caps = vt.getCapabilities ? vt.getCapabilities() : {};
-    const keep = {};
-    ['zoom', 'focusMode', 'torch', 'frameRate', 'width', 'height'].forEach(k => { if (caps[k] !== undefined) keep[k] = caps[k]; });
-    log('capacità della camera: ' + JSON.stringify(keep));
-  } catch (e) { /* non supportato */ }
-  const at = camStream.getAudioTracks()[0];
-  if (at) { const a = at.getSettings(); log('audio: ' + (at.label || 'microfono') + ' · ' + (a.sampleRate || '?') + ' Hz · echo=' + a.echoCancellation + ' rumore=' + a.noiseSuppression + ' agc=' + a.autoGainControl); }
-  else if ($('audioChk').checked) log('audio: nessuna traccia audio ottenuta');
-  camStream.getTracks().forEach(t => {
-    t.addEventListener('ended', () => log('traccia ' + t.kind + ' TERMINATA dal sistema'));
-    t.addEventListener('mute', () => log('traccia ' + t.kind + ' muta'));
-    t.addEventListener('unmute', () => log('traccia ' + t.kind + ' di nuovo attiva'));
-  });
-  outStream = cv.captureStream(30);
-  camStream.getAudioTracks().forEach(t => outStream.addTrack(t));
-  results.camera = 'ok ' + s.width + 'x' + s.height + ' @' + Math.round(s.frameRate || 0); remember();
-  $('camStop').disabled = false; $('camBtn').disabled = false; $('camBtn').textContent = 'Riavvia camera';
-  $('recBtn').disabled = false; $('rtcBtn').disabled = false;
-  lowSecs = 0;
-  fillCameras(s.deviceId);
-  keepAwake();
-}
-function stopCamera(silent) {
-  if (recording) stopRec();
-  if (camStream) camStream.getTracks().forEach(t => t.stop());
-  camStream = null; outStream = null; video.srcObject = null;
-  if (wl) { try { wl.release(); } catch (e) { /* già rilasciato */ } wl = null; }
-  $('camStop').disabled = true; $('recBtn').disabled = true; $('rtcBtn').disabled = true;
-  $('camBtn').textContent = 'Avvia camera';
-  if (!silent) log('camera fermata');
-  $('stats').textContent = 'Camera spenta.';
-}
-let lastDims = '';
-video.addEventListener('resize', () => {
-  if (!camStream) return;
-  const dims = video.videoWidth + 'x' + video.videoHeight;
-  if (dims === lastDims) return;
-  lastDims = dims;
-  log('formato del video cambiato: ' + video.videoWidth + 'x' + video.videoHeight + (recording ? ' (in registrazione: il file resta com\'era)' : ''));
-  if (!recording) setCanvasSize(video.videoWidth, video.videoHeight);
-});
-
-/* ---------- registrazione ---------- */
-let rec = null, chunks = [], recBytes = 0, recStart = 0, recMime = '', lastUrl = null, lastFile = null;
-const mb = n => (n / 1048576).toFixed(1) + ' MB';
-const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-function startRec() {
-  if (!outStream || typeof MediaRecorder === 'undefined') { log('registrazione: MediaRecorder non disponibile'); return; }
-  recMime = pickType();
-  const opts = { videoBitsPerSecond: 6000000, audioBitsPerSecond: 128000 };
-  if (recMime) opts.mimeType = recMime;
-  try { rec = new MediaRecorder(outStream, opts); }
-  catch (e) {
-    try { rec = new MediaRecorder(outStream); }
-    catch (e2) { results.record = 'errore ' + e2.name; remember(); log('registrazione: impossibile creare il registratore (' + e2.name + ')'); return; }
-  }
-  recMime = rec.mimeType || recMime;
-  chunks = []; recBytes = 0;
-  rec.ondataavailable = e => { if (e.data && e.data.size) { chunks.push(e.data); recBytes += e.data.size; } };
-  rec.onerror = e => { const n = e.error && e.error.name || '?'; results.record = 'errore ' + n; remember(); log('registrazione: ERRORE ' + n); };
-  rec.onpause = () => log('registratore in pausa'); rec.onresume = () => log('registratore ripreso');
-  rec.onstop = finishRec;
-  try { rec.start(1000); } catch (e) { results.record = 'errore ' + e.name; remember(); log('registrazione: start() rifiutato (' + e.name + ')'); return; }
-  recording = true; recStart = performance.now();
-  $('recBtn').textContent = 'Ferma registrazione';
-  $('result').hidden = true;
-  log('registrazione avviata · formato ' + (recMime || 'predefinito') + ' · canvas ' + cv.width + 'x' + cv.height);
-}
-function stopRec() { if (rec && rec.state !== 'inactive') { try { rec.stop(); } catch (e) { log('registrazione: stop() ' + e.name); } } }
-function finishRec() {
-  recording = false;
-  $('recBtn').textContent = 'Registra';
-  const dur = (performance.now() - recStart) / 1000;
-  const type = (recMime || 'video/mp4').split(';')[0];
-  const blob = new Blob(chunks, { type });
-  const ext = type.includes('mp4') ? 'mp4' : 'webm';
-  const d = new Date();
-  const name = 'prova-' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '-' +
-               String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + '.' + ext;
-  if (lastUrl) URL.revokeObjectURL(lastUrl);
-  lastUrl = URL.createObjectURL(blob);
-  lastFile = new File([blob], name, { type });
-  $('playback').src = lastUrl;
-  $('dlLink').href = lastUrl; $('dlLink').download = name;
-  $('result').hidden = false;
-  const mbps = dur > 0 ? (blob.size * 8 / dur / 1e6) : 0;
-  $('resultInfo').textContent = name + ' · ' + mb(blob.size) + ' · ' + mmss(dur) + ' · ' + mbps.toFixed(1) + ' Mbps · ' + chunks.length + ' blocchi';
-  results.record = blob.size > 0 ? 'ok ' + mb(blob.size) + ' in ' + Math.round(dur) + ' s (' + ext + ', ' + mbps.toFixed(1) + ' Mbps)' : 'file vuoto';
-  remember();
-  log('registrazione fermata · ' + $('resultInfo').textContent);
-  $('recStats').textContent = '';
-}
-$('playback').addEventListener('error', () => {
-  const e = $('playback').error;
-  log('RIPRODUZIONE del file registrato fallita · codice ' + (e ? e.code : '?') + (e && e.message ? ' ' + e.message : ''));
-  results.record += ' · ma il file non si riproduce';
-  remember();
-});
-$('playback').addEventListener('loadedmetadata', () => {
-  const p = $('playback');
-  log('file registrato leggibile · durata dichiarata ' + (isFinite(p.duration) ? p.duration.toFixed(1) + ' s' : 'non indicata') + ' · ' + p.videoWidth + 'x' + p.videoHeight);
-});
-$('shareBtn').addEventListener('click', async () => {
-  if (!lastFile) return;
-  try {
-    if (navigator.canShare && navigator.canShare({ files: [lastFile] })) {
-      await navigator.share({ files: [lastFile], title: 'Prova VolleyLive' });
-      log('condivisione: foglio chiuso (completata o annullata)');
-    } else {
-      log('condivisione: questo browser non condivide file di questo tipo, usa «Scarica il file»');
-      $('resultInfo').textContent += ' · Condividi non disponibile';
-    }
-  } catch (e) { log('condivisione: ' + e.name + ' ' + e.message); }
-});
-
-/* ---------- invio WebRTC simulato ---------- */
-async function runRtc() {
-  if (!outStream || typeof RTCPeerConnection === 'undefined') { log('webrtc: non disponibile'); return; }
-  const secs = +$('rtcDur').value;
-  $('rtcBtn').disabled = true;
-  $('rtcStats').textContent = 'Prova in corso…';
-  log('webrtc: avvio prova di ' + secs + ' s (4 Mbps, H.264 preferito)');
-  const pc1 = new RTCPeerConnection(), pc2 = new RTCPeerConnection();
-  const samples = [];
-  let decoded = 0;
-  try {
-    pc1.onicecandidate = e => { if (e.candidate) pc2.addIceCandidate(e.candidate).catch(() => {}); };
-    pc2.onicecandidate = e => { if (e.candidate) pc1.addIceCandidate(e.candidate).catch(() => {}); };
-    outStream.getTracks().forEach(t => pc1.addTrack(t, outStream));
-    const vtr = pc1.getTransceivers().find(t => t.sender.track && t.sender.track.kind === 'video');
-    try {
-      if (vtr.setCodecPreferences && window.RTCRtpSender && RTCRtpSender.getCapabilities) {
-        const caps = RTCRtpSender.getCapabilities('video').codecs;
-        const h = caps.filter(c => /h264/i.test(c.mimeType)), o = caps.filter(c => !/h264/i.test(c.mimeType));
-        if (h.length) vtr.setCodecPreferences(h.concat(o)); else log('webrtc: H.264 non offerto da questo browser');
-      }
-    } catch (e) { log('webrtc: scelta del codec non riuscita (' + e.name + ')'); }
-    const offer = await pc1.createOffer(); await pc1.setLocalDescription(offer); await pc2.setRemoteDescription(offer);
-    const answer = await pc2.createAnswer(); await pc2.setLocalDescription(answer); await pc1.setRemoteDescription(answer);
-    try {
-      const p = vtr.sender.getParameters();
-      if (!p.encodings || !p.encodings.length) p.encodings = [{}];
-      p.encodings[0].maxBitrate = 4000000; p.encodings[0].maxFramerate = 30;
-      await vtr.sender.setParameters(p);
-    } catch (e) { log('webrtc: limite di velocità non applicato (' + e.name + ')'); }
-    try {
-      const p = vtr.sender.getParameters();
-      p.degradationPreference = 'maintain-resolution';
-      await vtr.sender.setParameters(p);
-    } catch (e) { /* non supportato: nessun problema */ }
-    let prevBytes = 0, prevTs = 0;
-    for (let i = 0; i < secs; i++) {
-      await sleep(1000);
-      const rep = await pc1.getStats();
-      let out = null;
-      rep.forEach(r => { if (r.type === 'outbound-rtp' && (r.kind === 'video' || r.mediaType === 'video')) out = r; });
-      if (!out) continue;
-      const codec = out.codecId && rep.get(out.codecId) ? rep.get(out.codecId).mimeType : '?';
-      const kbps = prevTs ? (out.bytesSent - prevBytes) * 8 / (out.timestamp - prevTs) : 0;
-      prevBytes = out.bytesSent; prevTs = out.timestamp;
-      samples.push({ fps: out.framesPerSecond || 0, kbps, w: out.frameWidth, h: out.frameHeight, codec,
-                     impl: out.encoderImplementation || '?', eff: out.powerEfficientEncoder, lim: out.qualityLimitationReason || 'none' });
-      $('rtcStats').textContent = (i + 1) + '/' + secs + ' s · ' + Math.round(out.framesPerSecond || 0) + ' fps · ' + Math.round(kbps) + ' kbps · ' + codec;
-    }
-    const rep2 = await pc2.getStats();
-    rep2.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'video' || r.mediaType === 'video')) decoded = r.framesDecoded || 0; });
-  } catch (e) {
-    results.rtc = 'errore ' + e.name; remember();
-    log('webrtc: ERRORE ' + e.name + ' · ' + e.message);
-    $('rtcStats').textContent = 'Errore: ' + e.name;
-  } finally {
-    try { pc1.close(); pc2.close(); } catch (e) { /* già chiusi */ }
-    $('rtcBtn').disabled = !outStream;
-  }
-  if (samples.length < 3) { if (!/^errore/.test(results.rtc)) { results.rtc = 'nessun dato'; remember(); log('webrtc: nessuna statistica ricevuta'); } return; }
-  // la velocità dati parte bassa e sale: il giudizio si basa sugli ultimi secondi, il picco si riporta a parte
-  const use = samples.slice(-Math.min(6, samples.length - 2));
-  const avg = k => use.reduce((a, s) => a + s[k], 0) / use.length;
-  const lim = {}; samples.forEach(s => { lim[s.lim] = (lim[s.lim] || 0) + 1; });
-  const last = use[use.length - 1];
-  const peakKbps = Math.max.apply(null, samples.map(s => s.kbps));
-  const peakH = Math.max.apply(null, samples.map(s => s.h || 0));
-  const line = 'ultimi secondi: ' + Math.round(avg('fps')) + ' fps, ' + (avg('kbps') / 1000).toFixed(1) + ' Mbps, ' + last.w + 'x' + last.h +
-               ' · picco ' + (peakKbps / 1000).toFixed(1) + ' Mbps, altezza max ' + peakH + ' · ' + last.codec +
-               ', codificatore ' + last.impl + (last.eff === undefined ? '' : (last.eff ? ' (efficiente)' : ' (software?)')) +
-               ' · limiti: ' + Object.keys(lim).map(k => k + '×' + lim[k]).join(' ') + ' · ricevuti ' + decoded + ' fotogrammi';
-  results.rtc = (avg('fps') >= 27 ? 'ok ' : 'lento ') + line; remember();
-  log('webrtc: ' + line);
-  $('rtcStats').textContent = 'Fine. ' + line;
-}
-
-/* ---------- eventi di pagina ---------- */
-document.addEventListener('visibilitychange', () => {
-  const hidden = document.visibilityState === 'hidden';
-  log('pagina ' + (hidden ? 'in secondo piano' : 'di nuovo in primo piano') + tracksInfo() + (rec ? ' · registratore: ' + rec.state : ''));
-  if (!hidden && camStream) keepAwake();
-});
-addEventListener('pagehide', e => log('pagehide' + (e.persisted ? ' (resta in memoria)' : '')));
-addEventListener('pageshow', e => { if (e.persisted) log('pageshow dalla memoria'); });
-let rzT = 0;
-function onResize() {
-  clearTimeout(rzT);
-  rzT = setTimeout(() => log('finestra ' + innerWidth + 'x' + innerHeight + ' · orientamento ' + (screen.orientation ? screen.orientation.type : '?') +
-                              (camStream ? ' · video ' + video.videoWidth + 'x' + video.videoHeight : '')), 400);
-}
-addEventListener('resize', onResize);
-addEventListener('orientationchange', onResize);
-
-setInterval(() => {
-  const now = performance.now(), dt = (now - lastStat) / 1000;
-  lastStat = now;
-  camFps = vFrames / dt; drawFps = dFrames / dt; vFrames = 0; dFrames = 0;
-  if (camStream) {
-    $('stats').textContent = 'Camera ' + (video.requestVideoFrameCallback ? camFps.toFixed(0) + ' fps' : '?') + ' · disegno ' + drawFps.toFixed(0) + ' fps · ' + video.videoWidth + '×' + video.videoHeight;
-    if (video.requestVideoFrameCallback && document.visibilityState === 'visible') {
-      lowSecs = camFps < 24 ? lowSecs + 1 : 0;
-      if (lowSecs === 4) log('camera sotto i 24 fps da 4 secondi (' + camFps.toFixed(0) + ' fps)');
-    }
-  }
-  if (recording) {
-    const el = (now - recStart) / 1000;
-    $('recStats').textContent = 'REC ' + mmss(el) + ' · ' + mb(recBytes) + ' · ' + (el > 0 ? (recBytes * 8 / el / 1e6).toFixed(1) : '0.0') + ' Mbps · ' + chunks.length + ' blocchi';
-  }
-}, 1000);
-
-/* ---------- comandi ---------- */
-$('camBtn').addEventListener('click', startCamera);
-$('camStop').addEventListener('click', () => stopCamera(false));
-$('recBtn').addEventListener('click', () => { if (recording) stopRec(); else startRec(); });
-$('rtcBtn').addEventListener('click', runRtc);
-$('addA').addEventListener('click', () => addPoint(0));
-$('addB').addEventListener('click', () => addPoint(1));
-$('undo').addEventListener('click', undo);
-$('endSet').addEventListener('click', endSet);
-$('resetScore').addEventListener('click', resetScore);
-$('nameA').addEventListener('input', syncNames);
-$('nameB').addEventListener('input', syncNames);
-$('clearBtn').addEventListener('click', () => { logs.length = 0; renderReport(); });
-$('copyBtn').addEventListener('click', async () => {
-  const txt = $('report').value, ta = $('report');
-  try { await navigator.clipboard.writeText(txt); $('copyMsg').textContent = 'Rapporto copiato.'; }
-  catch (e) {
-    try { ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length); document.execCommand('copy'); $('copyMsg').textContent = 'Rapporto copiato.'; }
-    catch (e2) { $('copyMsg').textContent = 'Non riesco a copiare: tieni premuto sul testo, scegli Seleziona tutto e poi Copia.'; }
-  }
-});
-
-runChecks();
-syncNames();
-renderReport();
-log('pagina aperta · ' + (standalone ? 'schermata Home' : 'browser') + ' · apertura n. ' + store.launches);
-requestAnimationFrame(draw);
-</script>
+<script src="ort/ort.wasm.min.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
