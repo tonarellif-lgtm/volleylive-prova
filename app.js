@@ -229,7 +229,10 @@ function drawOverlay() {
   // lente d'ingrandimento mentre si trascina un angolo
   if (S.drag >= 0 && pts[S.drag]) {
     const p = pts[S.drag], r = 70 * k, z = 3;
-    const cx = p[0] < ov.width / 2 ? ov.width - r - 12 * k : r + 12 * k, cy = r + 12 * k;
+    // in basso a sinistra; passa a destra solo se l'angolo che si trascina sta proprio lì e verrebbe coperto
+    const cy = ov.height - r - 12 * k;
+    let cx = r + 12 * k;
+    if (Math.abs(p[0] - cx) < r + 40 * k && Math.abs(p[1] - cy) < r + 40 * k) cx = ov.width - r - 12 * k;
     octx.save(); octx.beginPath(); octx.arc(cx, cy, r, 0, Math.PI * 2); octx.clip();
     octx.fillStyle = '#000'; octx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
     octx.drawImage(cv, p[0] - r / z, p[1] - r / z, 2 * r / z, 2 * r / z, cx - r, cy - r, 2 * r, 2 * r);
