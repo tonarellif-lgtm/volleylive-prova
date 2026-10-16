@@ -5,7 +5,13 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
 
 ## Come funziona
 
-1. **Sorgente**: camera, oppure un video già registrato.
+0. **Tutto schermo**: «Avvia la camera» apre subito la ripresa a tutto schermo, con i tasti sopra l'immagine:
+   +1 per squadra ai lati, Via / Contesa / Annulla in basso, REC, «⋯» (punteggio del set, punti automatici,
+   registrazione salvata, chiudi la partita) e ✕ per tornare alla pagina. Funziona in orizzontale e in verticale.
+   Su iPhone Safari non esiste lo schermo intero vero per le pagine web: la pagina riempie l'area visibile e nasconde
+   la propria interfaccia; per far sparire anche la barra di Safari: Condividi → «Aggiungi alla schermata Home» e
+   aprirla da lì. Dove il browser lo permette (Android, iPad, computer) compare anche ⛶ per lo schermo intero.
+1. **Sorgente**: camera, oppure un video già registrato (il video registrato si usa nella pagina normale).
 2. **Il campo**: si toccano i 4 angoli del campo (prima i due del fondo «lato 1», poi i due del fondo opposto).
    Da lì la pagina ricava la posizione delle due zone di battuta. «Misura le persone» ricava l'altezza attesa
    delle giocatrici in ogni punto dell'immagine, quindi non serve una posizione di camera particolare.

@@ -83,6 +83,122 @@ td .tA{color:var(--teamA);font-weight:700} td .tB{color:var(--teamB);font-weight
 [hidden]{display:none!important}
 ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
 .steps{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ---- ripresa a tutto schermo: il video riempie lo schermo, i tasti stanno sopra ---- */
+body.live{overflow:hidden;overscroll-behavior:none}
+#live{
+  position:fixed;inset:0;z-index:50;background:#000;color:#fff;overflow:hidden;
+  --bg:#0d1117;--card:#161b22;--fg:#e6edf3;--muted:#9aa6b5;--line:#344052;--accent:#4c8dff;--accent-fg:#06101f;--rec:#e5384a;
+  color-scheme:dark;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+#live button{min-height:44px}
+#liveStageHost{
+  position:absolute;display:grid;place-items:center;
+  top:env(safe-area-inset-top,0px);right:env(safe-area-inset-right,0px);
+  bottom:env(safe-area-inset-bottom,0px);left:env(safe-area-inset-left,0px);
+}
+#live .stage{border-radius:0;flex:none}
+.hud{
+  position:absolute;inset:0;pointer-events:none;display:grid;gap:8px;
+  padding:max(8px,env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px))
+          max(8px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+  grid-template-columns:auto 1fr auto;grid-template-rows:auto 1fr auto;
+  grid-template-areas:"top top top" "ta . tb" ". act .";
+}
+.hud button,.hud select,.hud input{pointer-events:auto}
+.hud-top{grid-area:top;display:flex;gap:8px;align-items:flex-start;justify-content:flex-end;position:relative}
+.hud-status{
+  /* --sb-right: dove finisce il tabellone disegnato nell'immagine; lo stato sta tra il tabellone e i tasti in alto a destra */
+  flex:0 1 auto;min-width:0;max-width:calc(100vw - var(--sb-right,0px) - 256px);display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:none;
+}
+.hud-status .pill{text-align:center;border-radius:16px}
+/* durante la messa a punto del campo i testi stanno in alto a sinistra, su una riga, per non nascondere gli angoli */
+#live[data-phase="cal"] .hud-status{position:absolute;left:0;top:0;align-items:flex-start;max-width:calc(100% - 262px)}
+#live[data-phase="cal"] .hud-status .pill{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:4px 10px;font-size:.8rem}
+.pill{
+  display:inline-block;max-width:100%;padding:6px 12px;border-radius:999px;background:rgba(8,12,18,.66);color:#fff;
+  font:600 .86rem/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+.hb{
+  background:rgba(8,12,18,.66);color:#fff;border:1px solid rgba(255,255,255,.38);font-weight:600;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+.hb.round{width:44px;padding:0;font-size:1.2rem;border-radius:999px}
+.hb.rec{background:rgba(214,40,57,.9);border-color:transparent;padding:0 14px;white-space:nowrap}
+.hb.rec.on{outline:0;animation:blink 1.4s steps(2,jump-none) infinite}
+@keyframes blink{50%{opacity:.62}}
+.hb.team{
+  flex-direction:column;gap:0;border:0;color:#fff;line-height:1.05;border-radius:16px;
+  min-width:78px;min-height:104px;padding:6px 8px;opacity:.9;box-shadow:0 2px 10px rgba(0,0,0,.45);
+}
+.hb.team b{font-size:1.7rem;font-weight:800}
+.hb.team small{font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hudA{grid-area:ta;align-self:center}
+#hudB{grid-area:tb;align-self:center}
+.hud-act{grid-area:act;justify-self:center;display:flex;gap:8px;align-items:center;max-width:100%}
+.hud-act .hb{min-width:92px;font-size:1rem}
+/* tasti del campo: in orizzontale in colonna sul bordo destro, per non coprire gli angoli del campo */
+.hud-cal{grid-area:tb;align-self:center;display:flex;flex-direction:column;gap:6px;width:116px}
+.hud-cal .calbtns{display:flex;flex-direction:column;gap:6px}
+.hud-cal button{
+  width:100%;min-height:44px;padding:6px 8px;font-size:.84rem;line-height:1.15;text-align:center;white-space:normal;
+  background:rgba(8,12,18,.7);color:#fff;border:1px solid rgba(255,255,255,.38);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+#hudCalText .stats,#hudCalText{color:#fff;font:500 .84rem/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;white-space:normal;min-height:0}
+#hudCalText:has(.stats:empty){display:none}
+#live button.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+#live button:disabled{opacity:.4}
+#hudToast{
+  position:absolute;left:50%;top:calc(max(8px,env(safe-area-inset-top,0px)) + 52px);transform:translateX(-50%);
+  pointer-events:none;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;
+}
+#hudToast.show{opacity:1}
+.rotate-hint{display:none}
+.sheet{
+  position:absolute;inset:0;z-index:2;display:grid;place-items:center;padding:max(10px,env(safe-area-inset-top,0px)) max(10px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));
+  background:rgba(0,0,0,.45);touch-action:pan-y;-webkit-user-select:auto;user-select:auto;
+}
+.sheet>.panel{
+  width:min(100%,640px);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;touch-action:pan-y;background:rgba(13,17,23,.95);border:1px solid var(--line);
+  border-radius:14px;padding:12px;display:grid;gap:10px;-webkit-overflow-scrolling:touch;
+}
+.sheet h2{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sheet .row{align-items:center}
+#sheetSetup{pointer-events:none;background:rgba(0,0,0,.3)}
+#sheetSetup>.panel{pointer-events:auto}
+#live #setup{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+#live #setup>.team-in2,#live #setup>button{grid-column:1/-1}
+#live #startMatch{position:sticky;bottom:0;box-shadow:0 -10px 10px -2px rgba(13,17,23,.96)}
+#live #sideRow{flex:none}
+#live .list{max-height:120px}
+#live #recResult video{max-height:30vh}
+@media (orientation:portrait){
+  .hud{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto auto;grid-template-areas:"top top" ". ." "act act" "ta tb"}
+  #hudA,#hudB{width:100%;min-height:84px;flex-direction:row;gap:10px}
+  .hb.team small{max-width:40vw}
+  .hud-act{width:100%}
+  .hud-act .hb{flex:1}
+  .hud-top{flex-wrap:wrap}
+  .hud-status{order:2;flex:1 1 100%;max-width:100%!important;align-items:center}
+  #live[data-phase="cal"] .hud-status{position:static;max-width:100%;align-items:center}
+  #live[data-phase="cal"] .hud-status .pill{white-space:normal;max-width:100%}
+  .hud-cal{grid-area:act;width:100%;flex-direction:column}
+  .hud-cal .calbtns{flex-direction:row;flex-wrap:wrap}
+  .hud-cal .calbtns button{flex:1 1 30%}
+  #live #setup{grid-template-columns:1fr}
+  .rotate-hint{display:inline-block}
+}
+@media (max-height:420px) and (orientation:landscape){
+  .hb.team{min-height:84px}
+  #live .sheet h2{font-size:.95rem;margin:0}
+  #live .sheet>.panel{padding:8px;gap:6px}
+  #live select,#live input[type=text],#live input[type=color]{min-height:38px;height:38px}
+  #live label{gap:2px;font-size:.74rem}
+  #live #setup,#live #sheetSetupBody{gap:6px}
+  #live .sheet h2 button{min-height:38px}
+}
 </style>
 </head>
 <body>
@@ -100,7 +216,8 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
     <button id="fileBtn">Apri un video registrato</button>
     <input type="file" id="fileIn" accept="video/*" hidden>
   </div>
-  <p class="hint">Dalla camera: appoggia il telefono in orizzontale, fermo, con tutto il campo e le due zone di battuta in vista. Dal video: nessun dato lascia il telefono.</p>
+  <p class="hint">Dalla camera: appoggia il telefono in orizzontale, fermo, con tutto il campo e le due zone di battuta in vista. La camera si apre a tutto schermo, con i tasti sopra l'immagine. Dal video: nessun dato lascia il telefono.</p>
+  <p class="stats" id="srcMsg" role="status"></p>
   <div class="row">
     <label>Qualità camera
       <select id="resSel">
@@ -117,7 +234,7 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
 </section>
 
 <section class="card" id="secStage" hidden>
-  <div class="stage">
+  <div class="stage" id="stage">
     <canvas id="cv" width="1280" height="720"></canvas>
     <canvas id="ov" width="1280" height="720"></canvas>
   </div>
@@ -126,6 +243,7 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
     <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posizione nel video">
     <div class="row"><button id="playBtn" class="small">▶︎ Riproduci</button><span class="stats" id="seekTxt"></span></div>
   </div>
+  <div class="row" id="liveRow" hidden><button id="liveBtn" class="small primary">⛶ Tutto schermo coi tasti</button></div>
   <p class="stats" id="stats"></p>
 </section>
 
@@ -137,7 +255,7 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
     <button id="calReset" class="small">Ricomincia</button>
     <button id="calMeasure" class="primary" disabled>Misura le persone</button>
   </div>
-  <label>Quale squadra sta nel lato 1 (angoli 1-2)?
+  <label id="sideRow">Quale squadra sta nel lato 1 (angoli 1-2)?
     <select id="sideSel"><option value="a">Squadra A</option><option value="b">Squadra B</option></select>
   </label>
   <p class="stats" id="calInfo"></p>
@@ -156,27 +274,31 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
     <button id="resumeBtn" hidden>Riprendi la partita salvata</button>
   </div>
   <div id="play" hidden>
-    <div class="row">
-      <button id="addA" class="big a">+1 A</button>
-      <button id="addB" class="big b">+1 B</button>
+    <div id="playMain" style="display:grid;gap:10px">
+      <div class="row">
+        <button id="addA" class="big a">+1 A</button>
+        <button id="addB" class="big b">+1 B</button>
+      </div>
+      <div class="row">
+        <button id="viaBtn" class="primary">Via (inizio set)</button>
+        <button id="contesaBtn">Contesa</button>
+        <button id="undoBtn">Annulla</button>
+      </div>
     </div>
-    <div class="row">
-      <button id="viaBtn" class="primary">Via (inizio set)</button>
-      <button id="contesaBtn">Contesa</button>
-      <button id="undoBtn">Annulla</button>
+    <div id="playMore" style="display:grid;gap:10px">
+      <div class="row">
+        <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="autoChk" checked> Punti automatici</label>
+        <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="debugChk" checked> Mostra cosa vede</label>
+      </div>
+      <div class="row">
+        <label style="flex:0 0 76px">Punti A<input type="number" id="scA" min="0" max="60" inputmode="numeric"></label>
+        <label style="flex:0 0 76px">Punti B<input type="number" id="scB" min="0" max="60" inputmode="numeric"></label>
+        <button id="setScoreBtn" class="small">Imposta il punteggio del set</button>
+        <button id="endMatch" class="small">Chiudi la partita</button>
+      </div>
+      <p id="autoState">—</p>
+      <div class="list" id="autoLog"></div>
     </div>
-    <div class="row">
-      <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="autoChk" checked> Punti automatici</label>
-      <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="debugChk" checked> Mostra cosa vede</label>
-    </div>
-    <div class="row">
-      <label style="flex:0 0 76px">Punti A<input type="number" id="scA" min="0" max="60" inputmode="numeric"></label>
-      <label style="flex:0 0 76px">Punti B<input type="number" id="scB" min="0" max="60" inputmode="numeric"></label>
-      <button id="setScoreBtn" class="small">Imposta il punteggio del set</button>
-      <button id="endMatch" class="small">Chiudi la partita</button>
-    </div>
-    <p id="autoState">—</p>
-    <div class="list" id="autoLog"></div>
   </div>
 </section>
 
@@ -219,6 +341,52 @@ ol.how{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.9rem}
 </section>
 
 </main>
+<div id="live" hidden>
+  <div id="liveStageHost"></div>
+  <div class="hud">
+    <div class="hud-top">
+      <div class="hud-status">
+        <span class="pill" id="hudStatus">—</span>
+        <span class="pill" id="hudCalText"></span>
+        <span class="pill rotate-hint">↻ meglio col telefono in orizzontale</span>
+      </div>
+      <button id="hudFs" class="hb round" hidden aria-label="Schermo intero del browser" title="Schermo intero">⛶</button>
+      <button id="hudRec" class="hb rec">● REC</button>
+      <button id="hudMore" class="hb round" aria-label="Altro" title="Altro">⋯</button>
+      <button id="hudExit" class="hb round" aria-label="Esci dal tutto schermo" title="Esci dal tutto schermo">✕</button>
+    </div>
+    <span class="pill" id="hudToast" role="status"></span>
+    <button id="hudA" class="hb team a" hidden></button>
+    <div class="hud-act" id="hudAct" hidden>
+      <button id="hudVia" class="hb primary">Via</button>
+      <button id="hudContesa" class="hb">Contesa</button>
+      <button id="hudUndo" class="hb">Annulla</button>
+    </div>
+    <button id="hudB" class="hb team b" hidden></button>
+    <div class="hud-cal" id="hudCal">
+      <div class="calbtns" id="hudCalBtns"></div>
+      <button id="hudNext" class="hb primary" disabled>Avanti ›</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheetSetup" hidden>
+    <div class="panel">
+      <h2>Partita <button id="hudBack" class="small">‹ Il campo</button></h2>
+      <div id="sheetSetupBody" style="display:grid;gap:10px"></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheetMore" hidden>
+    <div class="panel">
+      <h2>Altro <button id="hudMoreClose" class="small">Chiudi</button></h2>
+      <div id="morePlay" style="display:grid;gap:10px"></div>
+      <div id="moreRec" style="display:grid;gap:8px"></div>
+      <div id="moreStats"></div>
+      <div class="row"><button id="hudReview" class="small">Vai alla revisione dei punti</button></div>
+    </div>
+  </div>
+</div>
+
 <script src="ort/ort.wasm.min.js"></script>
 <script type="module" src="app.js"></script>
 </body>

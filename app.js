@@ -44,12 +44,15 @@ const S = {
   rec: null, recChunks: [], recMime: '', recBlobUrl: null, recFile: null, recording: false,
   notes: [],
 };
+// ripresa a tutto schermo con i tasti sopra l'immagine
+const L = { on: false, phase: 'cal', lent: [], logLen: 0, ro: null, toastTimer: 0 };
 const cv = $('cv'), ctx = cv.getContext('2d');
 const ov = $('ov'), octx = ov.getContext('2d');
 
 const clock = () => (S.mode === 'file' ? S.video.currentTime : (performance.now() - S.clockStart) / 1000);
 const note = (m) => { S.notes.push(mmss(clock()) + ' ' + m); if (S.notes.length > 200) S.notes.shift(); };
 const stat = (m) => { $('stats').textContent = m; };
+const srcMsg = (m) => { $('srcMsg').textContent = m; };
 
 // ---------------------------------------------------------------- sorgente
 
@@ -65,6 +68,8 @@ function showSource(w, h, label) {
   } else { S.corners = []; }
   rebuildCal();
   S.dirty = true;
+  $('liveRow').hidden = S.mode !== 'camera';
+  if (L.on) fitStage();
   if (!S.looping) { S.looping = true; requestAnimationFrame(frame); }
 }
 
@@ -77,9 +82,10 @@ async function startCamera() {
     S.stream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: ac });
   } catch (e) {
     try { S.stream = await navigator.mediaDevices.getUserMedia({ video: vc, audio: false }); note('senza microfono'); }
-    catch (e2) { stat('Camera non disponibile: ' + e2.name + '. Controlla i permessi di Safari per questo sito.'); return; }
+    catch (e2) { srcMsg('Camera non disponibile: ' + e2.name + '. Controlla i permessi di Safari per questo sito.'); return; }
   }
   S.mode = 'camera';
+  srcMsg('');
   S.video.srcObject = S.stream;
   try { await S.video.play(); } catch (e) { note('play() rifiutato ' + e.name); }
   if (!S.video.videoWidth) await Promise.race([new Promise((r) => { S.video.onloadedmetadata = r; }), sleep(4000)]);
@@ -97,7 +103,7 @@ async function openFile(file) {
   const v = S.video;
   v.srcObject = null; v.src = S.fileUrl; v.muted = true; v.playsInline = true;
   await Promise.race([new Promise((r) => { v.onloadedmetadata = r; }), sleep(8000)]);
-  if (!v.videoWidth) { stat('Questo video non si apre in Safari (formato non supportato).'); return; }
+  if (!v.videoWidth) { srcMsg('Questo video non si apre in Safari (formato non supportato).'); return; }
   try { v.currentTime = 0.1; await new Promise((r) => { v.onseeked = r; setTimeout(r, 2000); }); } catch (e) { /* ignorato */ }
   $('seekRow').hidden = false; $('secOffline').hidden = false; $('secRec').hidden = true;
   showSource(v.videoWidth, v.videoHeight, 'video ' + mmss(v.duration));
@@ -215,9 +221,10 @@ function drawOverlay() {
         octx.strokeRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
       }
     }
-    octx.fillStyle = 'rgba(0,0,0,0.6)'; octx.fillRect(ov.width - 250 * k, 8 * k, 242 * k, 30 * k);
+    const by = S.engine ? 164 * k : 24 * k;
+    octx.fillStyle = 'rgba(0,0,0,0.6)'; octx.fillRect(24 * k, by, 242 * k, 30 * k);
     octx.fillStyle = '#fff'; octx.font = '700 ' + 15 * k + 'px ' + FONT; octx.textAlign = 'left'; octx.textBaseline = 'middle';
-    octx.fillText('lato 1 ' + (S.lastOcc.first ? '●' : '○') + '   lato 2 ' + (S.lastOcc.second ? '●' : '○'), ov.width - 242 * k, 23 * k);
+    octx.fillText('lato 1 ' + (S.lastOcc.first ? '●' : '○') + '   lato 2 ' + (S.lastOcc.second ? '●' : '○'), 32 * k, by + 15 * k);
   }
   // lente d'ingrandimento mentre si trascina un angolo
   if (S.drag >= 0 && pts[S.drag]) {
@@ -249,6 +256,8 @@ function rebuildCal() {
   } else {
     $('calInfo').textContent = pts.length + ' angoli su 4.';
   }
+  $('hudNext').disabled = !S.cal;
+  updateHud();
   S.dirty = true;
 }
 
@@ -369,7 +378,10 @@ function startMatch(snapshot = null) {
   S.scorer.autoApply = $('autoChk').checked;
   $('setup').hidden = true; $('play').hidden = false; $('secReview').hidden = false;
   S.lockCal = true;
-  labelButtons(); refreshAll();
+  L.logLen = 0;
+  labelButtons();
+  if (L.on) setPhase('play');
+  refreshAll();
   persist();
   if (S.mode === 'camera') startLive();
 }
@@ -378,6 +390,12 @@ $('startMatch').onclick = () => startMatch();
 function labelButtons() {
   $('addA').textContent = '+1 ' + S.config.teamAName; $('addB').textContent = '+1 ' + S.config.teamBName;
   $('addA').style.background = S.config.teamAColor; $('addB').style.background = S.config.teamBColor;
+  [['hudA', S.config.teamAName, S.config.teamAColor], ['hudB', S.config.teamBName, S.config.teamBColor]].forEach(([id, name, col]) => {
+    const b = $(id); b.textContent = '';
+    const big = document.createElement('b'); big.textContent = '+1';
+    const sm = document.createElement('small'); sm.textContent = name;
+    b.append(big, sm); b.style.background = col; b.setAttribute('aria-label', 'Un punto a ' + name);
+  });
 }
 const teamName = (side) => (side === 'a' ? S.config.teamAName : S.config.teamBName);
 
@@ -398,9 +416,13 @@ function refreshAll() {
     $('autoLog').appendChild(d);
   });
   if (document.activeElement !== $('scA') && document.activeElement !== $('scB')) { $('scA').value = st.pointsA; $('scB').value = st.pointsB; }
-  $('viaBtn').disabled = st.isFinished;
-  $('contesaBtn').disabled = sc.mode === 'idle' || st.isFinished;
-  $('undoBtn').disabled = !S.engine.canUndo;
+  const dis = (ids, v) => ids.forEach((id) => { $(id).disabled = v; });
+  dis(['viaBtn', 'hudVia'], st.isFinished);
+  dis(['contesaBtn', 'hudContesa'], sc.mode === 'idle' || st.isFinished);
+  dis(['undoBtn', 'hudUndo'], !S.engine.canUndo);
+  dis(['addA', 'addB', 'hudA', 'hudB'], st.isFinished);
+  updateHud();
+  announce(sc);
   renderReview();
 }
 
@@ -415,23 +437,26 @@ function manualPoint(side) {
   const prev = S.engine.state.currentSet;
   if (S.engine.apply({ type: 'point', side }, { time: clock(), auto: false })) afterManualChange(prev);
 }
-$('addA').onclick = () => manualPoint('a');
-$('addB').onclick = () => manualPoint('b');
-$('undoBtn').onclick = () => {
+const bind = (ids, fn) => ids.forEach((id) => { $(id).onclick = fn; });
+bind(['addA', 'hudA'], () => manualPoint('a'));
+bind(['addB', 'hudB'], () => manualPoint('b'));
+bind(['undoBtn', 'hudUndo'], () => {
   if (!S.engine) return;
   S.engine.undo();
   const st = S.engine.state;
   if (S.scorer.mode === 'idle' && !st.isFinished && !st.isAtStartOfSet) S.scorer.mode = 'tracking';
   S.scorer.lastAutoCount = null;
   persist(); refreshAll();
-};
-$('viaBtn').onclick = () => { if (S.engine) { S.scorer.arm(S.engine, null, clock()); persist(); refreshAll(); } };
-$('contesaBtn').onclick = () => { if (S.engine) { S.scorer.contesa(S.engine, clock()); persist(); refreshAll(); } };
+});
+bind(['viaBtn', 'hudVia'], () => { if (S.engine) { S.scorer.arm(S.engine, null, clock()); persist(); refreshAll(); } });
+bind(['contesaBtn', 'hudContesa'], () => { if (S.engine) { S.scorer.contesa(S.engine, clock()); persist(); refreshAll(); } });
 $('endMatch').onclick = () => {
+  if (S.engine && S.engine.events.length && !confirm('Chiudere la partita? Il punteggio e la revisione dei punti vengono cancellati.')) return;
   S.live = false; S.lockCal = false;
   $('setup').hidden = false; $('play').hidden = true;
   try { localStorage.removeItem(KEY); } catch (e) { /* ignorato */ }
   S.engine = null; S.scorer = null; S.dirty = true;
+  if (L.on) { closeMore(); setPhase('setup'); }
 };
 $('debugChk').onchange = () => { S.dirty = true; };
 $('autoChk').onchange = () => { if (S.scorer) S.scorer.autoApply = $('autoChk').checked; };
@@ -533,9 +558,15 @@ function startRec() {
   S.recording = true; S.recStart = performance.now();
   $('recBtn').textContent = 'Ferma la registrazione';
   $('recResult').hidden = true;
-  S.recTimer = setInterval(() => { $('recStats').textContent = '● ' + mmss((performance.now() - S.recStart) / 1000); }, 1000);
+  const tick = () => { const t = mmss((performance.now() - S.recStart) / 1000); $('recStats').textContent = '● ' + t; $('hudRec').textContent = '■ ' + t; };
+  tick(); $('hudRec').classList.add('on');
+  S.recTimer = setInterval(tick, 1000);
 }
-function stopRec() { if (S.rec && S.rec.state !== 'inactive') S.rec.stop(); clearInterval(S.recTimer); S.recording = false; $('recBtn').textContent = 'Registra'; }
+function stopRec() {
+  if (S.rec && S.rec.state !== 'inactive') S.rec.stop();
+  clearInterval(S.recTimer); S.recording = false;
+  $('recBtn').textContent = 'Registra'; $('hudRec').textContent = '● REC'; $('hudRec').classList.remove('on');
+}
 function finishRec() {
   const type = (S.recMime || 'video/mp4').split(';')[0];
   const blob = new Blob(S.recChunks, { type }), ext = type.includes('mp4') ? 'mp4' : 'webm';
@@ -546,8 +577,9 @@ function finishRec() {
   $('recResult').hidden = false;
   $('recStats').textContent = name + ' · ' + (blob.size / 1048576).toFixed(1) + ' MB';
   renderReview();
+  if (L.on) { openMore(); toast('Registrazione pronta: salvala da qui'); }
 }
-$('recBtn').onclick = () => (S.recording ? stopRec() : startRec());
+bind(['recBtn', 'hudRec'], () => (S.recording ? stopRec() : startRec()));
 $('shareBtn').onclick = async () => {
   if (!S.recFile) return;
   try {
@@ -610,9 +642,164 @@ $('copyBtn').onclick = async () => {
   catch (e) { $('report').select(); $('copyMsg').textContent = 'Seleziona e copia a mano.'; }
 };
 
+
+// ---------------------------------------------------------------- tutto schermo coi tasti sopra l'immagine
+
+// Gli stessi elementi della pagina (riquadro, campo, impostazioni) vengono «prestati» al tutto schermo e poi restituiti:
+// così c'è un solo insieme di campi e di funzioni, non due copie da tenere allineate.
+function lend(id, hostId) {
+  const el = $(id), mark = document.createComment('prestito ' + id);
+  el.parentNode.insertBefore(mark, el);
+  L.lent.push([el, mark]);
+  $(hostId).appendChild(el);
+}
+function giveBack() {
+  while (L.lent.length) { const [el, mark] = L.lent.pop(); mark.parentNode.insertBefore(el, mark); mark.remove(); }
+}
+
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+const FS_OK = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+function requestFs() {
+  const el = document.documentElement, fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (fn && !fsEl()) { try { const p = fn.call(el); if (p && p.catch) p.catch(() => {}); } catch (e) { /* non disponibile */ } }
+  try { const o = screen.orientation; if (o && o.lock) o.lock('landscape').catch(() => {}); } catch (e) { /* solo Android, a schermo intero */ }
+}
+function leaveFs() {
+  try { if (fsEl()) { const f = document.exitFullscreen || document.webkitExitFullscreen, p = f.call(document); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* ignorato */ }
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) { /* ignorato */ }
+}
+
+// Il riquadro del video occupa il più possibile dello schermo senza deformarsi; il resto resta nero
+function fitStage() {
+  if (!L.on) return;
+  const host = $('liveStageHost'), W = host.clientWidth, H = host.clientHeight;
+  if (!W || !H) return;
+  const ar = cv.width / cv.height;
+  let w = W, h = W / ar;
+  if (h > H) { h = H; w = H * ar; }
+  const st = $('stage'); st.style.width = Math.floor(w) + 'px'; st.style.height = Math.floor(h) + 'px';
+  // il tabellone è disegnato nell'immagine (in alto a sinistra, 374/1280 della larghezza): i testi in alto non devono finirci sopra
+  const r = st.getBoundingClientRect();
+  $('live').style.setProperty('--sb-right', Math.round(r.left + r.width * 374 / 1280 + 8) + 'px');
+  S.dirty = true;
+}
+
+const CAL_HINT = [
+  'Tocca l\'angolo 1: un estremo della linea di fondo del «lato 1»',
+  'Angolo 2: l\'altro estremo della stessa linea di fondo',
+  'Angolo 3: sul fondo opposto, dalla parte dell\'angolo 2',
+  'Angolo 4: l\'ultimo, ancora sul fondo opposto',
+  'Trascina i punti per sistemarli, poi «Misura le persone» e «Avanti»',
+];
+function playStatus() {
+  const st = S.engine.state, sc = S.scorer;
+  if (st.isFinished) return 'Partita finita · ' + teamName(st.winner) + ' ' + st.setsWon(st.winner) + '–' + st.setsWon(other(st.winner));
+  if (sc.mode === 'idle') return 'Premi «Via» a inizio set · batte ' + teamName(st.serving);
+  if (sc.mode === 'awaitingFirst') return 'Aspetto la prima battuta di ' + teamName(st.serving);
+  return 'Set ' + st.currentSet + ' · batte ' + teamName(st.serving) + (sc.autoApply ? '' : ' · punti automatici spenti');
+}
+function updateHud() {
+  if (!L.on) return;
+  let t;
+  if (!S.mode) t = 'Avvio la camera…';
+  else if (L.phase === 'cal') t = CAL_HINT[Math.min(4, S.corners.length)];
+  else if (L.phase === 'setup') t = 'Imposta la partita';
+  else t = S.engine ? playStatus() : '—';
+  $('hudStatus').textContent = t;
+}
+
+function toast(msg) {
+  if (!L.on) return;
+  const el = $('hudToast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(L.toastTimer); L.toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+// Un avviso sull'immagine per ciò che il riconoscimento ha deciso da solo
+function announce(sc) {
+  const n = sc.log.length;
+  if (L.on) {
+    const st = S.engine.state;
+    for (let i = L.logLen; i < n; i++) {
+      const e = sc.log[i];
+      if (e.action === 'punto') toast('Punto automatico: ' + teamName(e.side) + ' · ' + st.pointsA + '–' + st.pointsB);
+      else if (e.action === 'prima-battuta') toast('Prima battuta vista: si parte');
+      else if (e.action === 'contesa') toast(e.side ? 'Contesa: punto tolto' : 'Contesa: la prossima battuta non vale');
+      else if (e.action === 'ignorata') toast('Battuta ignorata (lato sbagliato)');
+      else if (e.action === 'via') toast('Via: aspetto la prima battuta');
+    }
+  }
+  L.logLen = n;
+}
+
+function setPhase(p) {
+  L.phase = p;
+  $('live').dataset.phase = p;
+  $('hudCal').hidden = p !== 'cal';
+  $('hudCalText').hidden = p !== 'cal';
+  $('hudAct').hidden = p !== 'play';
+  $('hudA').hidden = $('hudB').hidden = p !== 'play';
+  $('sheetSetup').hidden = p !== 'setup';
+  $('playMore').hidden = p !== 'play';
+  updateHud();
+}
+const openMore = () => { $('sheetMore').hidden = false; };
+const closeMore = () => { $('sheetMore').hidden = true; };
+
+function enterLive() {
+  if (L.on) return;
+  L.on = true;
+  document.body.classList.add('live');
+  $('live').hidden = false;
+  document.querySelector('main').inert = true;
+  lend('stage', 'liveStageHost');
+  lend('calInfo', 'hudCalText');
+  ['calUndo', 'calReset', 'calMeasure'].forEach((id) => lend(id, 'hudCalBtns'));
+  lend('sideRow', 'sheetSetupBody'); lend('setup', 'sheetSetupBody');
+  lend('playMore', 'morePlay');
+  lend('recStats', 'moreRec'); lend('recResult', 'moreRec');
+  lend('stats', 'moreStats');
+  $('hudFs').hidden = !FS_OK;
+  requestFs();
+  if (!L.ro && typeof ResizeObserver !== 'undefined') { L.ro = new ResizeObserver(fitStage); L.ro.observe($('liveStageHost')); }
+  setPhase(S.engine ? 'play' : 'cal');
+  fitStage();
+  if (S.engine) refreshAll();
+}
+function exitLive() {
+  if (!L.on) return;
+  L.on = false;
+  closeMore();
+  giveBack();
+  $('playMore').hidden = false;
+  $('stage').style.width = $('stage').style.height = '';
+  document.body.classList.remove('live');
+  document.querySelector('main').inert = false;
+  $('live').hidden = true;
+  leaveFs();
+  S.dirty = true;
+}
+
+$('hudExit').onclick = exitLive;
+$('liveBtn').onclick = enterLive;
+$('hudNext').onclick = () => { if (S.cal) setPhase('setup'); };
+$('hudBack').onclick = () => setPhase('cal');
+$('hudMore').onclick = () => ($('sheetMore').hidden ? openMore() : closeMore());
+$('hudMoreClose').onclick = closeMore;
+$('sheetMore').addEventListener('click', (e) => { if (e.target === $('sheetMore')) closeMore(); });
+$('hudReview').onclick = () => { exitLive(); if (S.engine) $('secReview').scrollIntoView({ block: 'start' }); };
+$('hudFs').onclick = () => (fsEl() ? leaveFs() : requestFs());
+['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { $('hudFs').textContent = fsEl() ? '⤡' : '⛶'; fitStage(); }));
+window.addEventListener('resize', fitStage);
+window.addEventListener('orientationchange', () => setTimeout(fitStage, 250));
+
 // ---------------------------------------------------------------- avvio
 
-$('camBtn').onclick = startCamera;
+// La camera si apre subito a tutto schermo: la richiesta parte dentro il tocco dell'utente, altrimenti il browser la rifiuta
+$('camBtn').onclick = async () => {
+  srcMsg('');
+  enterLive();
+  await startCamera();
+  if (S.mode !== 'camera') exitLive();
+};
 $('fileBtn').onclick = () => $('fileIn').click();
 $('fileIn').onchange = () => { const f = $('fileIn').files[0]; if (f) openFile(f); };
 document.addEventListener('visibilitychange', () => { note('pagina ' + document.visibilityState); if (document.visibilityState === 'visible' && S.mode === 'camera' && !S.wake && 'wakeLock' in navigator) navigator.wakeLock.request('screen').then((w) => { S.wake = w; }).catch(() => {}); });
@@ -631,4 +818,4 @@ document.addEventListener('visibilitychange', () => { note('pagina ' + document.
 if (store.snapshot && store.snapshot.events && store.snapshot.events.length) $('resumeBtn').hidden = false;
 $('resumeBtn').onclick = () => startMatch(store.snapshot);
 
-window.__vl = { S, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };
+window.__vl = { S, L, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };
