@@ -744,6 +744,11 @@ function setPhase(p) {
 const openMore = () => { $('sheetMore').hidden = false; };
 const closeMore = () => { $('sheetMore').hidden = true; };
 
+// Su iPhone la barra di Safari si toglie solo aprendo la pagina dall'icona nella schermata Home
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+document.querySelectorAll('[data-a2hs]').forEach((el) => { el.hidden = !(isIos && !isStandalone && !FS_OK); });
+
 function enterLive() {
   if (L.on) return;
   L.on = true;
