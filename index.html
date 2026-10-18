@@ -303,21 +303,21 @@ body.live{overflow:hidden;overscroll-behavior:none}
         <button id="setScoreBtn" class="small">Imposta il punteggio del set</button>
         <button id="endMatch" class="small">Chiudi la partita</button>
       </div>
-      <div id="tcBox" style="display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px">
-        <b>Telecomando (altro telefono)</b>
-        <p class="hint">Comanda la partita da un altro telefono, anche senza Wi-Fi: serve la rete dati su tutti e due. I messaggi sono cifrati e passano da un piccolo servizio intermedio (vedi relay/README.md).</p>
-        <label>Indirizzo del servizio<input type="text" id="tcRelay" placeholder="wss://volleylive-relay.…workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
-        <div class="row"><button id="tcToggle" class="small">Collega un telecomando</button></div>
-        <div id="tcOn" hidden style="display:grid;gap:8px">
-          <p class="stats" id="tcState" role="status"></p>
-          <input type="text" id="tcLinkTxt" readonly aria-label="Link del telecomando">
-          <div class="row"><button id="tcShare" class="small primary">Condividi il link</button><button id="tcCopy" class="small">Copia</button><button id="tcNew" class="small">Nuovo codice</button></div>
-          <p class="hint">Codice, se il link non si apre: <b id="tcCode"></b> (si scrive nella pagina del telecomando).</p>
-        </div>
-        <p class="stats" id="tcMsg" role="status"></p>
-      </div>
       <p id="autoState">—</p>
       <div class="list" id="autoLog"></div>
+    </div>
+    <div id="tcBox" style="display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px">
+      <b>Telecomando (altro telefono)</b>
+      <p class="hint">Comanda la partita da un altro telefono, anche senza Wi-Fi: serve la rete dati su tutti e due. I messaggi sono cifrati e passano da un piccolo servizio intermedio (vedi relay/README.md).</p>
+      <label>Indirizzo del servizio<input type="text" id="tcRelay" placeholder="wss://volleylive-relay.…workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <div class="row"><button id="tcToggle" class="small">Collega un telecomando</button></div>
+      <div id="tcOn" hidden style="display:grid;gap:8px">
+        <p class="stats" id="tcState" role="status"></p>
+        <input type="text" id="tcLinkTxt" readonly aria-label="Link del telecomando">
+        <div class="row"><button id="tcShare" class="small primary">Condividi il link</button><button id="tcCopy" class="small">Copia</button><button id="tcNew" class="small">Nuovo codice</button></div>
+        <p class="hint">Codice, se il link non si apre: <b id="tcCode"></b> (si scrive nella pagina del telecomando).</p>
+      </div>
+      <p class="stats" id="tcMsg" role="status"></p>
     </div>
   </div>
 </section>

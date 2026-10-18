@@ -844,6 +844,7 @@ function enterLive() {
   ['calUndo', 'calReset', 'calMeasure'].forEach((id) => lend(id, 'hudCalBtns'));
   lend('sideRow', 'sheetSetupBody'); lend('setup', 'sheetSetupBody');
   lend('playMore', 'morePlay');
+  lend('tcBox', 'morePlay');
   lend('recStats', 'moreRec'); lend('recResult', 'moreRec');
   lend('stats', 'moreStats');
   $('hudFs').hidden = !FS_OK;
