@@ -7,18 +7,19 @@ cifrato, per dare lo stato a un telecomando che si collega dopo.
 
 ## Installazione da GitHub (consigliata)
 
-Il repository della pagina contiene `.github/workflows/deploy-relay.yml`: installa il relay su Cloudflare e, da allora,
-ogni modifica alla cartella `relay/` si installa da sola. Il token resta nei segreti di GitHub e nessuno lo vede.
+Il repository del progetto (`volleylive`) contiene `.github/workflows/deploy-relay.yml`: installa il relay su Cloudflare e, da allora,
+ogni modifica alla cartella `web/relay/` si installa da sola. Il token resta nei segreti di GitHub e nessuno lo vede.
 
 1. Account gratuito su <https://dash.cloudflare.com>. La prima volta Cloudflare chiede di scegliere il sottodominio
    `workers.dev` (nella sezione Workers & Pages; il nome della voce può cambiare): senza, l'installazione si ferma con un errore.
 2. Token: My Profile → API Tokens → Create Token → modello «Edit Cloudflare Workers», scegli il tuo account, crea e copia il
    token (si vede una volta sola).
 3. Id dell'account: Workers & Pages → Overview, a destra («Account ID»).
-4. Su GitHub, nel repository della pagina: Settings → Secrets and variables → Actions → New repository secret. Ne servono due,
+4. Su GitHub, nel repository `volleylive`: Settings → Secrets and variables → Actions → New repository secret. Ne servono due,
    con questi nomi: `CLOUDFLARE_API_TOKEN` (il token) e `CLOUDFLARE_ACCOUNT_ID` (l'id).
 5. Actions → «Installa il relay del telecomando» → Run workflow. A fine lavoro il riepilogo mostra l'indirizzo da usare,
    già con `wss://` davanti: va scritto nel campo «Indirizzo del servizio» del telefono con la camera (una volta sola).
+   Il lavoro poi prova il relay appena installato (due collegati finti nella stessa stanza di prova) e scrive nel riepilogo se la prova è superata.
 6. Controlla `ALLOWED_ORIGINS` in `wrangler.toml`: deve essere l'indirizzo della tua pagina (ora `https://tonarellif-lgtm.github.io`).
 
 Il token del modello «Edit Cloudflare Workers» permette di modificare i Worker dell'account: tienilo solo nei segreti e
@@ -54,3 +55,4 @@ sia `server.mjs` sia `worker.js`.
 
 - `node --test ../tests/relay.test.mjs` (dopo `npm install`): stanza, cifratura, riconnessione, server vero.
 - Il Worker si prova in locale con `npx wrangler dev --local --port 8788`, con lo stesso motore (workerd) dell'hosting.
+- `node smoke.mjs wss://indirizzo [origine]`: prova un relay già installato (inoltro nei due sensi, ultimo stato conservato, conteggio dei collegati, ping e rifiuto delle pagine di altri indirizzi). È la stessa prova che fa il workflow dopo l'installazione.

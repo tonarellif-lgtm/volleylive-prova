@@ -2,9 +2,9 @@
 // I messaggi tra i due telefoni sono cifrati con una chiave ricavata dal codice (AES-GCM): il relay vede solo testo illeggibile
 // e un nome di stanza ricavato dal codice, non il codice.
 
-// Indirizzo del relay usato se non se ne scrive uno nella pagina. Dopo aver installato relay/ si può mettere qui, per esempio
-// 'wss://volleylive-relay.nome.workers.dev', e i link del telecomando non richiedono altro.
-export const DEFAULT_RELAY = '';
+// Indirizzo del relay usato se non se ne scrive uno nella pagina (relay/ installato con il workflow «Installa il relay del telecomando»).
+// Con un relay proprio basta cambiarlo qui o scriverlo nel campo «Indirizzo del servizio».
+export const DEFAULT_RELAY = 'wss://volleylive-relay.tonarelli-f.workers.dev';
 
 const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';   // senza 0 O 1 I L: si legge e si detta senza errori
 export const CODE_LEN = 8;                             // 31^8 ≈ 40 bit
