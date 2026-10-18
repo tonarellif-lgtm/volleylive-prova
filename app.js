@@ -1,6 +1,7 @@
 // VolleyLive web: ripresa (o video registrato), riconoscimento della battuta nel browser, punteggio automatico.
 import { ScoreEngine, defaultConfig, AutoScorer, FIRST, SECOND, other, pointDoubts, labelPoints } from './engine.js';
 import { Calibration, PersonDetector, sampleOccupancy, checkCorners } from './vision.js';
+import { DEFAULT_RELAY, makeCode, showCode, deriveKeys, normalizeRelay, joinUrl, ReplayGuard, Link } from './remote.js';
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -441,6 +442,7 @@ function refreshAll() {
   renderReview();
   updateHud();
   announce(sc);
+  tcPublish();
 }
 
 // Che fine fa ogni punto automatico (invertito, tolto, lasciato): serve a misurare la precisione sulle partite vere
@@ -494,6 +496,7 @@ $('endMatch').onclick = () => {
   try { localStorage.removeItem(KEY); } catch (e) { /* ignorato */ }
   S.engine = null; S.scorer = null; S.dirty = true;
   S.issued = []; S.issuedPtr = 0; S.confirmed = new Set(); S.neutral = new Set(); S.resyncs = []; S.doubtCount = 0;
+  tcPublish(true);
   if (L.on) { closeMore(); setPhase('setup'); }
 };
 $('debugChk').onchange = () => { S.dirty = true; };
@@ -767,7 +770,8 @@ const CAL_HINT = [
   'Angolo 4: l\'ultimo, ancora sul fondo opposto',
   'Trascina i punti per sistemarli, poi «Misura le persone» e «Avanti»',
 ];
-function playStatus() {
+function playStatus() { return playStatusText() + (TC.remotes ? ' · 📡 ' + TC.remotes : ''); }
+function playStatusText() {
   const st = S.engine.state, sc = S.scorer;
   if (st.isFinished) return 'Partita finita · ' + teamName(st.winner) + ' ' + st.setsWon(st.winner) + '–' + st.setsWon(other(st.winner));
   if (sc.mode === 'idle') return 'Premi «Via» a inizio set · batte ' + teamName(st.serving);
@@ -785,6 +789,7 @@ function updateHud() {
 }
 
 function toast(msg) {
+  if (tcLive()) TC.link.send({ k: 'toast', text: msg });
   if (!L.on) return;
   const el = $('hudToast'); el.textContent = msg; el.classList.add('show');
   clearTimeout(L.toastTimer); L.toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
@@ -792,7 +797,7 @@ function toast(msg) {
 // Un avviso sull'immagine per ciò che il riconoscimento ha deciso da solo
 function announce(sc) {
   const n = sc.log.length;
-  if (L.on) {
+  if (L.on || tcLive()) {
     const st = S.engine.state;
     for (let i = L.logLen; i < n; i++) {
       const e = sc.log[i];
@@ -898,8 +903,102 @@ document.addEventListener('visibilitychange', () => { note('pagina ' + document.
     $('srcChip').textContent = 'partita salvata: riapri la sorgente per continuare';
   }
 })();
+// ---------------------------------------------------------------- telecomando (altro telefono)
+// Questo telefono tiene il punteggio vero. Il telecomando (telecomando.html) manda comandi e riceve lo stato; tutto passa dal
+// relay, cifrato con una chiave ricavata dal codice. I comandi usano gli stessi gestori dei tasti, quindi valgono le stesse regole.
+
+const TC = { link: null, code: null, relay: '', on: false, connected: false, remotes: 0, guard: new ReplayGuard(), lastJson: '', lastAt: 0, beat: null };
+const tcLive = () => !!(TC.link && TC.connected && TC.remotes > 0);
+const tcMsg = (t) => { $('tcMsg').textContent = t || ''; };
+
+function tcState() {
+  if (!S.engine) return { k: 'state', ts: Date.now(), started: false };
+  const st = S.engine.state, sc = S.scorer;
+  const byId = new Map(S.issued.map((i) => [i.id, i]));
+  const recent = S.engine.timeline().filter((r) => r.event.type === 'point').slice(-4).map((r) => {
+    const it = r.meta.id != null ? byId.get(r.meta.id) : null;
+    return { side: r.event.side, a: r.a, b: r.b, set: r.set, auto: !!r.meta.auto, doubt: !!(it && !S.confirmed.has(it.id) && doubtsOf(it).length), t: r.meta.time };
+  });
+  return {
+    k: 'state', ts: Date.now(), started: true,
+    a: { name: S.config.teamAName, color: $('colA').value }, b: { name: S.config.teamBName, color: $('colB').value },
+    set: st.currentSet, pa: st.pointsA, pb: st.pointsB, sa: st.setsWonA, sb: st.setsWonB, serving: st.serving,
+    mode: sc.mode, auto: sc.autoApply, finished: st.isFinished, winner: st.isFinished ? st.winner : null,
+    canUndo: S.engine.canUndo, doubts: S.doubtCount, status: playStatus(), recent,
+  };
+}
+// Manda lo stato se è cambiato, e comunque ogni 5 s (il telecomando capisce così che questo telefono è vivo)
+function tcPublish(force = false) {
+  if (!TC.link || !TC.connected) return;
+  const s = tcState(), j = JSON.stringify({ ...s, ts: 0 }), now = Date.now();
+  if (!force && j === TC.lastJson && now - TC.lastAt < 5000) return;
+  TC.lastJson = j; TC.lastAt = now;
+  TC.link.send(s, true);
+}
+const TC_BTN = { addA: 'hudA', addB: 'hudB', undo: 'hudUndo', via: 'hudVia', contesa: 'hudContesa' };
+function tcCommand(m) {
+  if (!m || m.k !== 'cmd' || !TC.guard.accept(m.sid, m.seq)) return;
+  let ok = true, msg = '';
+  if (!S.engine) { ok = false; msg = 'La partita non è ancora cominciata'; }
+  else if (TC_BTN[m.c]) { const b = $(TC_BTN[m.c]); if (b.disabled) { ok = false; msg = 'Non disponibile ora'; } else b.click(); }
+  else if (m.c === 'score') {
+    const a = m.a, b = m.b;
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a > 60 || b > 60) { ok = false; msg = 'Punteggio non valido'; }
+    else { ok = applyScore(a, b); msg = ok ? '' : $('copyMsg').textContent; }
+  } else if (m.c === 'auto') { $('autoChk').checked = !!m.on; $('autoChk').onchange(); persist(); refreshAll(); }
+  else { ok = false; msg = 'Comando sconosciuto'; }
+  TC.link.send({ k: 'ack', sid: m.sid, seq: m.seq, ok, msg });
+}
+function tcStatus(s) {
+  TC.connected = s.connected; TC.remotes = Math.max(0, s.peers - 1);
+  tcRender(); updateHud();
+}
+function tcRender() {
+  $('tcToggle').textContent = TC.on ? 'Scollega il telecomando' : 'Collega un telecomando';
+  $('tcOn').hidden = !TC.on;
+  $('tcRelay').disabled = TC.on;
+  if (!TC.on) return;
+  $('tcState').textContent = !TC.connected ? 'Mi collego al servizio…' : TC.remotes ? '📡 ' + TC.remotes + (TC.remotes === 1 ? ' telecomando collegato' : ' telecomandi collegati') : 'Collegato al servizio, aspetto il telecomando.';
+  $('tcLinkTxt').value = joinUrl(location.href, TC.code, TC.relay);
+  $('tcCode').textContent = showCode(TC.code);
+}
+async function tcOpen() {
+  const relay = normalizeRelay($('tcRelay').value || (store.tc && store.tc.relay) || DEFAULT_RELAY);
+  if (!relay) { tcMsg('Scrivi l\'indirizzo del servizio, per esempio wss://volleylive-relay.nome.workers.dev'); return false; }
+  if (location.protocol === 'https:' && relay.startsWith('ws:') && !/^ws:\/\/(localhost|127\.0\.0\.1)/.test(relay)) { tcMsg('Da una pagina https serve un indirizzo che comincia con wss://'); return false; }
+  tcMsg('');
+  const code = (store.tc && store.tc.code) || makeCode();
+  const { key, room } = await deriveKeys(code);
+  if (TC.link) TC.link.close();
+  TC.code = code; TC.relay = relay; TC.on = true; TC.remotes = 0; TC.connected = false; TC.lastJson = '';
+  $('tcRelay').value = relay;
+  TC.link = new Link({ relay, room, key, onMessage: tcCommand, onStatus: tcStatus, onOpen: () => tcPublish(true) });
+  TC.link.open();
+  clearInterval(TC.beat); TC.beat = setInterval(() => tcPublish(), 5000);
+  store.tc = { code, relay, on: true }; persist();
+  tcRender();
+  return true;
+}
+function tcClose(keepCode = true) {
+  if (TC.link) TC.link.close();
+  TC.link = null; TC.on = false; TC.connected = false; TC.remotes = 0; clearInterval(TC.beat);
+  store.tc = { code: keepCode && store.tc ? store.tc.code : undefined, relay: TC.relay || (store.tc && store.tc.relay), on: false }; persist();
+  tcRender(); updateHud();
+}
+$('tcToggle').onclick = async () => { if (TC.on) tcClose(); else await tcOpen(); };
+$('tcNew').onclick = async () => { if (!confirm('Il codice cambia: i telecomandi già collegati smettono di funzionare finché non apri il nuovo link. Continuare?')) return; tcClose(false); await tcOpen(); };
+$('tcCopy').onclick = async () => { try { await navigator.clipboard.writeText($('tcLinkTxt').value); tcMsg('Link copiato.'); } catch (e) { $('tcLinkTxt').select(); tcMsg('Seleziona e copia a mano.'); } };
+$('tcShare').onclick = async () => {
+  const url = $('tcLinkTxt').value;
+  if (navigator.share) { try { await navigator.share({ title: 'Telecomando VolleyLive', text: 'Apri il link per comandare la partita:', url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  $('tcCopy').onclick();
+};
+$('tcRelay').onchange = () => { store.tc = { ...(store.tc || {}), relay: normalizeRelay($('tcRelay').value) || $('tcRelay').value.trim() }; persist(); };
+if (store.tc && store.tc.relay) $('tcRelay').value = store.tc.relay; else if (DEFAULT_RELAY) $('tcRelay').value = DEFAULT_RELAY;
+if (store.tc && store.tc.on) tcOpen().catch(() => {});
+
 // Ripresa di una partita salvata
 if (store.snapshot && store.snapshot.events && store.snapshot.events.length) $('resumeBtn').hidden = false;
 $('resumeBtn').onclick = () => startMatch(store.snapshot);
 
-window.__vl = { S, L, refreshAll, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };
+window.__vl = { S, L, TC, refreshAll, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };

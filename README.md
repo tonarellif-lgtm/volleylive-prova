@@ -22,6 +22,15 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
 5. **Correzioni**: +1, Annulla, «Imposta il punteggio del set» e, a fine partita, la tabella di revisione
    (▶︎ rivede il momento, ⇄ inverte il punto, ✕ lo toglie).
 
+6. **Telecomando**: un secondo telefono comanda la partita senza Wi-Fi (basta la rete dati). Sul telefono con la camera:
+   «⋯ Altro» → Telecomando → indirizzo del servizio → «Collega un telecomando» → «Condividi il link». Sull'altro telefono il link
+   apre `telecomando.html`: punteggio, chi batte, ultimi punti, +1, Annulla, Via, Contesa, Punteggio e Punti automatici.
+   Il telefono con la camera resta quello che tiene il punteggio e fa girare il riconoscimento; il telecomando manda comandi
+   e riceve lo stato, quindi non ci sono conflitti. I messaggi passano da un piccolo relay e sono cifrati (vedi `relay/README.md`).
+   Il link contiene il codice (8 caratteri) dopo il `#`, che non va ai server: chi ha il link comanda la partita, «Nuovo codice»
+   lo annulla. I comandi ripetuti dal relay vengono scartati. Se il collegamento cade si riprende da solo; se il telefono con la
+   camera non manda lo stato per 13 s il telecomando lo segnala e spegne i tasti.
+
 ## Come riconosce la battuta
 
 Rilevatore di persone YOLOX-nano (3,6 MB) con onnxruntime-web, solo sui due ritagli delle zone di battuta,
@@ -52,6 +61,9 @@ si usava 720p). Nella partita:
   momento in cui si campiona il punteggio di un set cambia di diversi punti. Va usato con revisione.
 - Non riconosce i gesti dell'arbitro. La contesa si segnala col tasto.
 - Provato in Chromium senza interfaccia con un video reale e con una camera finta; **non ancora provato su iPhone**.
+  Il telecomando è provato con due pagine nel browser e un relay locale, e il Worker con workerd in locale; **non è stato
+  provato su rete mobile vera né con il Worker installato su Cloudflare**.
+- Dal telecomando non si fa ancora la revisione dei punti (⇄, ✕, ✓): quella resta sul telefono con la camera.
 - La pagina deve restare aperta e il telefono acceso; con lo schermo bloccato Safari ferma camera e riconoscimento.
 - Niente diretta su YouTube: dal browser serve un server che converta il flusso.
 
@@ -60,6 +72,7 @@ si usava 720p). Nella partita:
 ```bash
 cd web
 node --test tests/engine.test.mjs tests/vision.test.mjs
+(cd relay && npm install) && node --test tests/relay.test.mjs   # telecomando e relay
 ```
 
 I test del motore includono la partita reale (presenze al secondo estratte dal video): `tests/v3-occupancy.json`.

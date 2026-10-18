@@ -1,0 +1,8 @@
+{
+  "name": "volleylive-relay",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.mjs", "deploy": "wrangler deploy" },
+  "dependencies": { "ws": "^8.18.0" },
+  "devDependencies": { "wrangler": "^4.0.0" }
+}
