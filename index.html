@@ -138,8 +138,12 @@ body.live{overflow:hidden;overscroll-behavior:none}
 }
 .hb.team b{font-size:1.7rem;font-weight:800}
 .hb.team small{font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#hudA{grid-area:ta;align-self:center}
-#hudB{grid-area:tb;align-self:center}
+/* ogni squadra: il tasto grande (+1) e sotto un −1 piccolo, staccato abbastanza da non toccarlo per sbaglio */
+.hud-side{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+#hudSideA{grid-area:ta;align-self:center}
+#hudSideB{grid-area:tb;align-self:center}
+#live .hb.mini{min-height:30px;height:30px;padding:0 10px;font-size:.86rem;border-radius:12px;opacity:.9}
+.hud-act .hb.end{border-color:rgba(255,125,125,.75);color:#ffc2c2}
 .hud-act{grid-area:act;justify-self:center;display:flex;gap:8px;align-items:center;max-width:100%}
 .hud-act .hb{min-width:92px;font-size:1rem}
 /* tasti del campo: in orizzontale in colonna sul bordo destro, per non coprire gli angoli del campo */
@@ -184,7 +188,7 @@ body.live{overflow:hidden;overscroll-behavior:none}
   #hudA,#hudB{width:100%;min-height:84px;flex-direction:row;gap:10px}
   .hb.team small{max-width:40vw}
   .hud-act{width:100%}
-  .hud-act .hb{flex:1;min-width:0;padding:0 6px;font-size:.92rem}
+  .hud-act .hb{flex:1;min-width:0;padding:0 6px;font-size:.9rem;line-height:1.1}
   .hud-top{flex-wrap:wrap}
   #hudToast{left:50%;max-width:92vw}
   .hud-status{order:2;flex:1 1 100%;max-width:100%!important;align-items:center}
@@ -287,8 +291,11 @@ body.live{overflow:hidden;overscroll-behavior:none}
         <button id="addB" class="big b">+1 B</button>
       </div>
       <div class="row">
+        <button id="subA" class="small" aria-label="Togli un punto alla squadra A">−1 A</button>
+        <button id="subB" class="small" aria-label="Togli un punto alla squadra B">−1 B</button>
+      </div>
+      <div class="row">
         <button id="viaBtn" class="primary">Via (inizio set)</button>
-        <button id="contesaBtn">Contesa</button>
         <button id="undoBtn">Annulla</button>
       </div>
     </div>
@@ -301,7 +308,7 @@ body.live{overflow:hidden;overscroll-behavior:none}
         <label style="flex:0 0 76px">Punti A<input type="number" id="scA" min="0" max="60" inputmode="numeric"></label>
         <label style="flex:0 0 76px">Punti B<input type="number" id="scB" min="0" max="60" inputmode="numeric"></label>
         <button id="setScoreBtn" class="small">Imposta il punteggio del set</button>
-        <button id="endMatch" class="small">Chiudi la partita</button>
+        <button id="endMatch" class="small">Fine partita</button>
       </div>
       <p id="autoState">—</p>
       <div class="list" id="autoLog"></div>
@@ -378,14 +385,20 @@ body.live{overflow:hidden;overscroll-behavior:none}
       <button id="hudExit" class="hb round" aria-label="Esci dal tutto schermo" title="Esci dal tutto schermo">✕</button>
     </div>
     <span class="pill" id="hudToast" role="status"></span>
-    <button id="hudA" class="hb team a" hidden></button>
+    <div class="hud-side" id="hudSideA" hidden>
+      <button id="hudA" class="hb team a"></button>
+      <button id="hudSubA" class="hb mini" aria-label="Togli un punto alla squadra A">−1</button>
+    </div>
     <div class="hud-act" id="hudAct" hidden>
       <button id="hudVia" class="hb primary">Via</button>
-      <button id="hudContesa" class="hb">Contesa</button>
       <button id="hudScore" class="hb">Punteggio</button>
       <button id="hudUndo" class="hb">Annulla</button>
+      <button id="hudEnd" class="hb end">Fine partita</button>
     </div>
-    <button id="hudB" class="hb team b" hidden></button>
+    <div class="hud-side" id="hudSideB" hidden>
+      <button id="hudB" class="hb team b"></button>
+      <button id="hudSubB" class="hb mini" aria-label="Togli un punto alla squadra B">−1</button>
+    </div>
     <div class="hud-cal" id="hudCal">
       <div class="calbtns" id="hudCalBtns"></div>
       <button id="hudNext" class="hb primary" disabled>Avanti ›</button>

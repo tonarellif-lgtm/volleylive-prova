@@ -435,7 +435,8 @@ function refreshAll() {
   if (document.activeElement !== $('scA') && document.activeElement !== $('scB')) { $('scA').value = st.pointsA; $('scB').value = st.pointsB; }
   const dis = (ids, v) => ids.forEach((id) => { $(id).disabled = v; });
   dis(['viaBtn', 'hudVia', 'hudScore'], st.isFinished);
-  dis(['contesaBtn', 'hudContesa'], sc.mode === 'idle' || st.isFinished);
+  dis(['subA', 'hudSubA'], st.isFinished || st.pointsA === 0);
+  dis(['subB', 'hudSubB'], st.isFinished || st.pointsB === 0);
   dis(['undoBtn', 'hudUndo'], !S.engine.canUndo);
   dis(['addA', 'addB', 'hudA', 'hudB'], st.isFinished);
   syncIssued();
@@ -452,7 +453,7 @@ function syncIssued() {
   for (; S.issuedPtr < sc.log.length; S.issuedPtr++) {
     const e = sc.log[S.issuedPtr];
     if (e.action === 'punto') S.issued.push({ id: e.id, time: e.time, side: e.side, end: e.end, gap: e.gap, q: e.q });
-    if (e.undoneId != null) S.neutral.add(e.undoneId);            // tolto dal tasto Contesa: non è un errore
+    if (e.undoneId != null) S.neutral.add(e.undoneId);            // tolto dalla contesa (oggi solo nell'analisi di un video): non è un errore
   }
 }
 // La durata di una presenza si giudica solo a presenza finita: con la camera dopo qualche secondo, con un video a analisi finita
@@ -488,17 +489,34 @@ bind(['undoBtn', 'hudUndo'], () => {
   persist(); refreshAll();
 });
 bind(['viaBtn', 'hudVia'], () => { if (S.engine) { S.scorer.arm(S.engine, null, clock()); persist(); refreshAll(); } });
-bind(['contesaBtn', 'hudContesa'], () => { if (S.engine) { S.scorer.contesa(S.engine, clock()); persist(); refreshAll(); } });
-$('endMatch').onclick = () => {
-  if (S.engine && S.engine.events.length && !confirm('Chiudere la partita? Il punteggio e la revisione dei punti vengono cancellati.')) return;
+// −1: toglie l'ultimo punto di quella squadra nel set. Se era un punto automatico, nella revisione risulta «tolto».
+function removePoint(side) {
+  if (!S.engine) return;
+  const st = S.engine.state;
+  const a = st.pointsA - (side === 'a' ? 1 : 0), b = st.pointsB - (side === 'b' ? 1 : 0);
+  if (a < 0 || b < 0 || st.isFinished) return;
+  if (!S.engine.setScore(a, b, { time: clock(), auto: false })) return;
+  S.scorer.lastAutoCount = null;
+  toast('Tolto un punto a ' + teamName(side));
+  persist(); refreshAll();
+}
+bind(['subA', 'hudSubA'], () => removePoint('a'));
+bind(['subB', 'hudSubB'], () => removePoint('b'));
+// Fine partita: dal telecomando la conferma si chiede sul telecomando stesso, qui sul telefono con la camera non servirebbe a nessuno
+function endMatchNow() {
   S.live = false; S.lockCal = false;
   $('setup').hidden = false; $('play').hidden = true;
-  try { localStorage.removeItem(KEY); } catch (e) { /* ignorato */ }
   S.engine = null; S.scorer = null; S.dirty = true;
   S.issued = []; S.issuedPtr = 0; S.confirmed = new Set(); S.neutral = new Set(); S.resyncs = []; S.doubtCount = 0;
+  $('reviewedChk').checked = false;
+  persist();          // salva «nessuna partita»: restano campo, squadre e collegamento del telecomando
   tcPublish(true);
   if (L.on) { closeMore(); setPhase('setup'); }
-};
+}
+bind(['endMatch', 'hudEnd'], () => {
+  if (S.engine && S.engine.events.length && !confirm('Terminare la partita? Il punteggio e la revisione dei punti vengono cancellati.')) return;
+  endMatchNow();
+});
 $('debugChk').onchange = () => { S.dirty = true; };
 $('reviewedChk').onchange = () => { persist(); if (S.engine) renderReview(); };
 $('autoChk').onchange = () => { if (S.scorer) S.scorer.autoApply = $('autoChk').checked; };
@@ -820,7 +838,7 @@ function setPhase(p) {
   $('hudCal').hidden = p !== 'cal';
   $('hudCalText').hidden = p !== 'cal';
   $('hudAct').hidden = p !== 'play';
-  $('hudA').hidden = $('hudB').hidden = p !== 'play';
+  $('hudSideA').hidden = $('hudSideB').hidden = p !== 'play';
   $('sheetSetup').hidden = p !== 'setup';
   $('playMore').hidden = p !== 'play';
   updateHud();
@@ -936,7 +954,7 @@ function tcPublish(force = false) {
   TC.lastJson = j; TC.lastAt = now;
   TC.link.send(s, true);
 }
-const TC_BTN = { addA: 'hudA', addB: 'hudB', undo: 'hudUndo', via: 'hudVia', contesa: 'hudContesa' };
+const TC_BTN = { addA: 'hudA', addB: 'hudB', subA: 'hudSubA', subB: 'hudSubB', undo: 'hudUndo', via: 'hudVia' };
 function tcCommand(m) {
   if (!m || m.k !== 'cmd' || !TC.guard.accept(m.sid, m.seq)) return;
   let ok = true, msg = '';
@@ -946,6 +964,7 @@ function tcCommand(m) {
     const a = m.a, b = m.b;
     if (!Number.isInteger(a) || !Number.isInteger(b) || a < 0 || b < 0 || a > 60 || b > 60) { ok = false; msg = 'Punteggio non valido'; }
     else { ok = applyScore(a, b); msg = ok ? '' : $('copyMsg').textContent; }
+  } else if (m.c === 'end') { endMatchNow(); toast('Partita terminata dal telecomando');
   } else if (m.c === 'auto') { $('autoChk').checked = !!m.on; $('autoChk').onchange(); persist(); refreshAll(); }
   else { ok = false; msg = 'Comando sconosciuto'; }
   TC.link.send({ k: 'ack', sid: m.sid, seq: m.seq, ok, msg });

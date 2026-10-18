@@ -6,8 +6,8 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
 ## Come funziona
 
 0. **Tutto schermo**: «Avvia la camera» apre subito la ripresa a tutto schermo, con i tasti sopra l'immagine:
-   +1 per squadra ai lati, Via / Contesa / Annulla in basso, REC, «⋯» (punteggio del set, punti automatici,
-   registrazione salvata, chiudi la partita) e ✕ per tornare alla pagina. «Punteggio» (accanto a Via, Contesa e Annulla)
+   +1 per squadra ai lati (con un piccolo −1 sotto), Via / Punteggio / Annulla / Fine partita in basso, REC, «⋯» (punteggio
+   del set, punti automatici, registrazione salvata) e ✕ per tornare alla pagina. «Punteggio» (accanto a Via, Annulla e Fine partita)
    serve a risincronizzarsi al volo: si scrive il punteggio del tabellone dell'arbitro, per esempio 12-9. Funziona in orizzontale e in verticale.
    Su iPhone Safari non esiste lo schermo intero vero per le pagine web: la pagina riempie l'area visibile e nasconde
    la propria interfaccia; per far sparire anche la barra di Safari: Condividi → «Aggiungi alla schermata Home» e
@@ -18,13 +18,15 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
    delle giocatrici in ogni punto dell'immagine, quindi non serve una posizione di camera particolare.
 3. **Partita**: nomi, colori, chi batte per prima. «Via» a ogni set dice alla pagina che si comincia.
 4. **Punto automatico**: la battuta segue il punto, quindi ogni nuova battuta avvistata da un lato dà il punto alla
-   squadra di quel lato. La prima battuta del set non è un punto. «Contesa» dice che l'azione si ripete.
-5. **Correzioni**: +1, Annulla, «Imposta il punteggio del set» e, a fine partita, la tabella di revisione
-   (▶︎ rivede il momento, ⇄ inverte il punto, ✕ lo toglie).
+   squadra di quel lato. La prima battuta del set non è un punto. Se l'azione si ripete (contesa) e il punto è già stato dato, si toglie con −1.
+5. **Correzioni**: +1, −1 (toglie l'ultimo punto di quella squadra nel set; se era un punto automatico, nella revisione
+   risulta «tolto»), Annulla, «Imposta il punteggio del set» e, a fine partita, la tabella di revisione
+   (▶︎ rivede il momento, ⇄ inverte il punto, ✕ lo toglie). **Fine partita** (con conferma) chiude la partita e cancella
+   punteggio e revisione: prima copia il rapporto, se ti serve. Restano il campo, le squadre e il collegamento del telecomando.
 
 6. **Telecomando**: un secondo telefono comanda la partita senza Wi-Fi (basta la rete dati). Sul telefono con la camera:
    «⋯ Altro» → Telecomando → indirizzo del servizio → «Collega un telecomando» → «Condividi il link». Sull'altro telefono il link
-   apre `telecomando.html`: punteggio, chi batte, ultimi punti, +1, Annulla, Via, Contesa, Punteggio e Punti automatici.
+   apre `telecomando.html`: punteggio, chi batte, ultimi punti, +1 e −1, Via, Punteggio, Annulla, Fine partita (chiede conferma) e Punti automatici.
    Il telefono con la camera resta quello che tiene il punteggio e fa girare il riconoscimento; il telecomando manda comandi
    e riceve lo stato, quindi non ci sono conflitti. I messaggi passano da un piccolo relay e sono cifrati (vedi `relay/README.md`).
    Il link contiene il codice (8 caratteri) dopo il `#`, che non va ai server: chi ha il link comanda la partita, «Nuovo codice»
@@ -59,7 +61,7 @@ si usava 720p). Nella partita:
 
 - Il riconoscimento non è perfetto: a 768×432 il lato lontano è rumoroso, e cambiando di poco le soglie o il
   momento in cui si campiona il punteggio di un set cambia di diversi punti. Va usato con revisione.
-- Non riconosce i gesti dell'arbitro. La contesa si segnala col tasto.
+- Non riconosce i gesti dell'arbitro né le contese: il punto dato per errore si toglie con −1.
 - Provato in Chromium senza interfaccia con un video reale e con una camera finta; **non ancora provato su iPhone**.
   Il telecomando è provato con due pagine nel browser e un relay locale, e il Worker con workerd in locale; **non è stato
   provato su rete mobile vera né con il Worker installato su Cloudflare**.

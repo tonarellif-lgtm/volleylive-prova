@@ -77,7 +77,8 @@ function render() {
   const busy = !!R.pending || !up;
   $('bA').disabled = busy || s.finished; $('bB').disabled = busy || s.finished;
   $('bVia').disabled = busy || s.finished; $('bScore').disabled = busy || s.finished;
-  $('bContesa').disabled = busy || s.finished || s.mode === 'idle';
+  $('bSubA').disabled = busy || s.finished || !s.pa; $('bSubB').disabled = busy || s.finished || !s.pb;
+  $('bEnd').disabled = busy;
   $('bUndo').disabled = busy || !s.canUndo;
   $('auto').disabled = busy; if (!R.pending) $('auto').checked = !!s.auto;
 }
@@ -106,7 +107,12 @@ $('bA').onclick = () => send('addA');
 $('bB').onclick = () => send('addB');
 $('bUndo').onclick = () => send('undo');
 $('bVia').onclick = () => send('via');
-$('bContesa').onclick = () => send('contesa');
+$('bSubA').onclick = () => send('subA');
+$('bSubB').onclick = () => send('subB');
+$('bEnd').onclick = () => {
+  if (online() && !confirm('Terminare la partita? Sul telefono con la camera il punteggio e la revisione dei punti vengono cancellati.')) return;
+  send('end');
+};
 $('auto').onchange = () => send('auto', { on: $('auto').checked });
 $('bScore').onclick = () => {
   const s = R.state; if (!s || !online()) return;

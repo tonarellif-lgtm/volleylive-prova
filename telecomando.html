@@ -60,8 +60,11 @@ button.big small{font-size:.8rem;font-weight:700;letter-spacing:.05em;text-trans
 button.big.a{background:var(--teamA)} button.big.b{background:var(--teamB)}
 button.primary{background:var(--accent);color:var(--accent-fg);border-color:transparent}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.col{display:grid;gap:10px;align-content:start}
+button.mini{min-height:38px;font-size:.95rem;border-radius:10px}
+button.end{border-color:var(--bad);color:var(--bad)}
 .four{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.four button{font-size:.92rem;padding:0 4px}
+.four button{font-size:.92rem;padding:0 4px;line-height:1.1}
 .opts{display:flex;justify-content:center}
 .opts label{display:flex;gap:8px;align-items:center;font-size:.92rem;color:var(--muted)}
 .toast{position:fixed;left:50%;top:56%;transform:translate(-50%,-50%);max-width:92vw;background:#000c;color:#fff;border-radius:999px;padding:10px 16px;font-size:.92rem;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center}
@@ -106,14 +109,20 @@ input.relay{letter-spacing:0}
 
   <div class="pad" id="pad" hidden>
     <div class="two">
-      <button class="big a" id="bA"><span>+1</span><small id="bAn"></small></button>
-      <button class="big b" id="bB"><span>+1</span><small id="bBn"></small></button>
+      <div class="col">
+        <button class="big a" id="bA"><span>+1</span><small id="bAn"></small></button>
+        <button class="mini" id="bSubA" aria-label="Togli un punto alla squadra A">−1</button>
+      </div>
+      <div class="col">
+        <button class="big b" id="bB"><span>+1</span><small id="bBn"></small></button>
+        <button class="mini" id="bSubB" aria-label="Togli un punto alla squadra B">−1</button>
+      </div>
     </div>
     <div class="four">
       <button class="primary" id="bVia">Via</button>
-      <button id="bContesa">Contesa</button>
       <button id="bScore">Punteggio</button>
       <button id="bUndo">Annulla</button>
+      <button class="end" id="bEnd">Fine partita</button>
     </div>
     <div class="opts"><label><input type="checkbox" id="auto"> Punti automatici</label></div>
   </div>
