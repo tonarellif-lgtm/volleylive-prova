@@ -1,0 +1,31 @@
+# Convertitore di diretta VolleyLive: telefono (WebSocket) -> ffmpeg -> RTMP/RTMPS verso YouTube o Facebook.
+# Sul Synology: Container Manager -> Progetto -> Crea, cartella /volume1/docker/volleylive_stream (con questi file e un file .env).
+services:
+  stream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: volleylive-stream:latest
+    container_name: volleylive-stream
+    restart: unless-stopped
+    environment:
+      # codice di accesso: lo si scrive nel file .env (vedi .env.example), non qui
+      STREAM_TOKEN: ${STREAM_TOKEN:?scrivi STREAM_TOKEN nel file .env}
+      # pagine autorizzate a collegarsi (senza barra finale); più indirizzi separati da virgola
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://tonarellif-lgtm.github.io}
+      # server RTMP oltre a YouTube e Facebook (facoltativo)
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # auto = copia H.264/AAC senza ricodificare (poca CPU); transcode = ricodifica sempre (serve un NAS più potente)
+      MODE: ${MODE:-auto}
+      MAX_SESSIONS: ${MAX_SESSIONS:-1}
+      TZ: Europe/Rome
+    ports:
+      - "8090:8080"
+    # Decommenta per non far salire la CPU del NAS oltre un limite se ricodifica:
+    # cpus: "1.5"
+    networks:
+      - stream_internal
+
+networks:
+  stream_internal:
+    driver: bridge

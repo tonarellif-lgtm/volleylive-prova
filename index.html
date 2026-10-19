@@ -131,6 +131,8 @@ body.live{overflow:hidden;overscroll-behavior:none}
 .hb.round{width:44px;padding:0;font-size:1.2rem;border-radius:999px}
 .hb.rec{background:rgba(214,40,57,.9);border-color:transparent;padding:0 14px;white-space:nowrap}
 .hb.rec.on{outline:0;animation:blink 1.4s steps(2,jump-none) infinite}
+.hb.rec.stream{background:rgba(94,64,214,.92)}
+.hb.rec.stream.retry{background:rgba(214,120,20,.92)}
 @keyframes blink{50%{opacity:.62}}
 .hb.team{
   flex-direction:column;gap:0;border:0;color:#fff;line-height:1.05;border-radius:16px;
@@ -326,6 +328,25 @@ body.live{overflow:hidden;overscroll-behavior:none}
       </div>
       <p class="stats" id="tcMsg" role="status"></p>
     </div>
+    <div id="stBox" style="display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px">
+      <b>Diretta (YouTube, Facebook)</b>
+      <p class="hint">Trasmette in diretta l'immagine con il tabellone. Il browser non parla con YouTube e Facebook: il video passa dal convertitore che installi sul tuo NAS (vedi stream/README.md) e che lo gira a loro. Serve la camera accesa.</p>
+      <div class="row">
+        <label>Dove<select id="stPlat"><option value="youtube">YouTube</option><option value="facebook">Facebook</option><option value="other">Altro (RTMP)</option></select></label>
+        <label>Qualità<select id="stQ"></select></label>
+      </div>
+      <label id="stUrlRow" hidden>Indirizzo RTMP<input type="text" id="stUrl" placeholder="rtmps://…" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <label>Chiave della diretta<input type="password" id="stKey" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="incolla la chiave"></label>
+      <p class="hint" id="stHint"></p>
+      <label>Indirizzo del convertitore<input type="text" id="stConv" placeholder="wss://nas.tuonome.synology.me:8443" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <label>Codice di accesso<input type="password" id="stTok" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="STREAM_TOKEN del convertitore"></label>
+      <div class="row">
+        <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="stCompat"> Ricodifica sempre</label>
+        <label style="flex:0 0 auto;display:flex;gap:8px;align-items:center;color:var(--fg);font-size:.9rem;flex-direction:row"><input type="checkbox" id="stRemember" checked> Ricorda la chiave su questo telefono</label>
+      </div>
+      <div class="row"><button id="stGo" class="small primary">Vai in diretta</button></div>
+      <p class="stats" id="stMsg" role="status"></p>
+    </div>
   </div>
 </section>
 
@@ -380,6 +401,7 @@ body.live{overflow:hidden;overscroll-behavior:none}
         <span class="pill rotate-hint">↻ meglio col telefono in orizzontale</span>
       </div>
       <button id="hudFs" class="hb round" hidden aria-label="Schermo intero del browser" title="Schermo intero">⛶</button>
+      <button id="hudStream" class="hb rec stream" hidden aria-label="Diretta in corso: apri i dettagli">● DIRETTA</button>
       <button id="hudRec" class="hb rec">● REC</button>
       <button id="hudMore" class="hb round" aria-label="Altro" title="Altro">⋯</button>
       <button id="hudExit" class="hb round" aria-label="Esci dal tutto schermo" title="Esci dal tutto schermo">✕</button>

@@ -32,6 +32,12 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
    Il link contiene il codice (8 caratteri) dopo il `#`, che non va ai server: chi ha il link comanda la partita, «Nuovo codice»
    lo annulla. I comandi ripetuti dal relay vengono scartati. Se il collegamento cade si riprende da solo; se il telefono con la
    camera non manda lo stato per 13 s il telecomando lo segnala e spegne i tasti.
+7. **Diretta (YouTube, Facebook)**: «⋯ Altro» → Diretta. Si sceglie dove, si incolla la chiave della diretta, si scrivono indirizzo e
+   codice del **convertitore** (`stream/`, un contenitore Docker da mettere sul proprio NAS: vedi `stream/README.md`) e si preme
+   «Vai in diretta». Il browser non sa parlare RTMP, quindi il telefono manda l'immagine con il tabellone (quella che si
+   registra) al convertitore dentro un WebSocket cifrato e lui la gira a YouTube o Facebook con ffmpeg. In alto compare il tasto
+   viola col tempo di diretta. Se la rete cade riprova da sola; Fine partita ferma anche la diretta. La chiave resta sul telefono
+   (si può togliere la spunta «Ricorda la chiave») e non entra mai nel rapporto.
 
 ## Come riconosce la battuta
 
@@ -63,18 +69,23 @@ si usava 720p). Nella partita:
   momento in cui si campiona il punteggio di un set cambia di diversi punti. Va usato con revisione.
 - Non riconosce i gesti dell'arbitro né le contese: il punto dato per errore si toglie con −1.
 - Provato in Chromium senza interfaccia con un video reale e con una camera finta; **non ancora provato su iPhone**.
-  Il telecomando è provato con due pagine nel browser e un relay locale, e il Worker con workerd in locale; **non è stato
-  provato su rete mobile vera né con il Worker installato su Cloudflare**.
+  Il telecomando è provato con due pagine nel browser e un relay locale; il Worker installato su Cloudflare ha superato la prova
+  automatica (due collegati nella stessa stanza) ma **non è stato provato su rete mobile vera**.
+- La diretta è provata con una camera finta nel browser, il convertitore con Node e ffmpeg e un ricevitore RTMP locale (arrivano
+  video H.264, audio AAC e il tabellone nei fotogrammi): **non è stata provata su iPhone, né verso YouTube o Facebook veri, né
+  l'immagine Docker** (dove l'ho scritta non c'è Docker). Il video che esce dal MediaRecorder di Safari e il fotogramma chiave
+  ogni 2 secondi richiesto da Facebook vanno visti su un prova vera (se serve c'è «Ricodifica sempre»).
 - Dal telecomando non si fa ancora la revisione dei punti (⇄, ✕, ✓): quella resta sul telefono con la camera.
 - La pagina deve restare aperta e il telefono acceso; con lo schermo bloccato Safari ferma camera e riconoscimento.
-- Niente diretta su YouTube: dal browser serve un server che converta il flusso.
+- La diretta richiede il convertitore sul NAS e un nome `wss://` con certificato valido (vedi `stream/README.md`); con la rete dati debole il ritardo cresce e la pagina riparte da capo.
 
 ## Prove
 
 ```bash
 cd web
-node --test tests/engine.test.mjs tests/vision.test.mjs
+node --test tests/engine.test.mjs tests/vision.test.mjs tests/livestream.test.mjs
 (cd relay && npm install) && node --test tests/relay.test.mjs   # telecomando e relay
+(cd stream && npm ci) && node --test tests/stream.test.mjs      # convertitore di diretta (serve ffmpeg)
 ```
 
 I test del motore includono la partita reale (presenze al secondo estratte dal video): `tests/v3-occupancy.json`.

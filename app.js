@@ -1,6 +1,7 @@
 // VolleyLive web: ripresa (o video registrato), riconoscimento della battuta nel browser, punteggio automatico.
 import { ScoreEngine, defaultConfig, AutoScorer, FIRST, SECOND, other, pointDoubts, labelPoints } from './engine.js';
 import { Calibration, PersonDetector, sampleOccupancy, checkCorners } from './vision.js';
+import { LiveStream, PLATFORMS, QUALITY, DEFAULT_QUALITY, checkSettings } from './livestream.js';
 import { DEFAULT_RELAY, makeCode, showCode, deriveKeys, normalizeRelay, joinUrl, ReplayGuard, Link } from './remote.js';
 
 const $ = (id) => document.getElementById(id);
@@ -52,6 +53,8 @@ const S = {
 const L = { on: false, phase: 'cal', lent: [], logLen: 0, ro: null, toastTimer: 0 };
 const cv = $('cv'), ctx = cv.getContext('2d');
 const ov = $('ov'), octx = ov.getContext('2d');
+// diretta verso YouTube/Facebook tramite il convertitore (livestream.js); l'interfaccia è più sotto, nella sezione «diretta»
+const ST = new LiveStream({ canvas: cv, getAudioTracks: () => (S.stream ? S.stream.getAudioTracks() : []), onState: (i) => stRender(i) });
 
 const clock = () => (S.mode === 'file' ? S.video.currentTime : (performance.now() - S.clockStart) / 1000);
 const note = (m) => { S.notes.push(mmss(clock()) + ' ' + m); if (S.notes.length > 200) S.notes.shift(); };
@@ -117,6 +120,7 @@ async function openFile(file) {
 async function stopSource() {
   S.live = false; S.stopAnalyze = true;
   if (S.recording) stopRec();
+  if (ST.active) ST.stop();
   if (S.stream) S.stream.getTracks().forEach((t) => t.stop());
   S.stream = null;
   if (S.wake) { try { S.wake.release(); } catch (e) { /* ignorato */ } S.wake = null; }
@@ -504,6 +508,7 @@ bind(['subA', 'hudSubA'], () => removePoint('a'));
 bind(['subB', 'hudSubB'], () => removePoint('b'));
 // Fine partita: dal telecomando la conferma si chiede sul telecomando stesso, qui sul telefono con la camera non servirebbe a nessuno
 function endMatchNow() {
+  if (ST.active) ST.stop();        // la diretta finisce con la partita
   if (S.recording) stopRec();      // il video si chiude e si presenta da salvare (finishRec apre «Altro» con la registrazione pronta)
   S.live = false; S.lockCal = false;
   $('setup').hidden = false; $('play').hidden = true;
@@ -515,7 +520,8 @@ function endMatchNow() {
   if (L.on) { closeMore(); setPhase('setup'); }
 }
 bind(['endMatch', 'hudEnd'], () => {
-  const msg = 'Terminare la partita? Il punteggio e la revisione dei punti vengono cancellati' + (S.recording ? ' e la registrazione si ferma (resta da salvare).' : '.');
+  const stops = [S.recording && 'la registrazione si ferma (resta da salvare)', ST.active && 'la diretta si interrompe'].filter(Boolean);
+  const msg = 'Terminare la partita? Il punteggio e la revisione dei punti vengono cancellati' + (stops.length ? ' e ' + stops.join(' e ') : '') + '.';
   if (S.engine && S.engine.events.length && !confirm(msg)) return;
   endMatchNow();
 });
@@ -865,6 +871,7 @@ function enterLive() {
   lend('sideRow', 'sheetSetupBody'); lend('setup', 'sheetSetupBody');
   lend('playMore', 'morePlay');
   lend('tcBox', 'morePlay');
+  lend('stBox', 'morePlay');
   lend('recStats', 'moreRec'); lend('recResult', 'moreRec');
   lend('stats', 'moreStats');
   $('hudFs').hidden = !FS_OK;
@@ -945,7 +952,7 @@ function tcState() {
     a: { name: S.config.teamAName, color: $('colA').value }, b: { name: S.config.teamBName, color: $('colB').value },
     set: st.currentSet, pa: st.pointsA, pb: st.pointsB, sa: st.setsWonA, sb: st.setsWonB, serving: st.serving,
     mode: sc.mode, auto: sc.autoApply, finished: st.isFinished, winner: st.isFinished ? st.winner : null,
-    canUndo: S.engine.canUndo, doubts: S.doubtCount, status: playStatus(), recent,
+    canUndo: S.engine.canUndo, doubts: S.doubtCount, status: playStatus() + streamTag(), recent,
   };
 }
 // Manda lo stato se è cambiato, e comunque ogni 5 s (il telecomando capisce così che questo telefono è vivo)
@@ -1019,8 +1026,69 @@ $('tcRelay').onchange = () => { store.tc = { ...(store.tc || {}), relay: normali
 if (store.tc && store.tc.relay) $('tcRelay').value = store.tc.relay; else if (DEFAULT_RELAY) $('tcRelay').value = DEFAULT_RELAY;
 if (store.tc && store.tc.on) tcOpen().catch(() => {});
 
+// ---------------------------------------------------------------- diretta (YouTube / Facebook tramite il convertitore sul NAS)
+// Qui solo l'interfaccia e il salvataggio dei campi; il collegamento e il video sono in livestream.js, la conversione in stream/.
+// La chiave resta sul telefono (se si lascia la spunta) e va solo all'indirizzo del convertitore scritto qui; non entra mai nel rapporto.
+
+let stLast = 'idle';
+function streamTag() { const i = ST.info; return i.state === 'live' ? ' · 🔴 in diretta' : i.state === 'retry' || i.state === 'connecting' ? ' · 🔴 diretta: mi ricollego' : ''; }
+const stSay = (t) => { $('stMsg').textContent = t || ''; };
+function stRender(i) {
+  const on = ST.active;
+  $('stGo').textContent = on ? 'Ferma la diretta' : 'Vai in diretta';
+  $('stGo').classList.toggle('primary', !on);
+  ['stPlat', 'stQ', 'stUrl', 'stKey', 'stConv', 'stTok', 'stCompat', 'stRemember'].forEach((id) => { $(id).disabled = on; });
+  $('stMsg').textContent = i.text || '';
+  const hb = $('hudStream');
+  hb.hidden = !on;
+  hb.textContent = i.state === 'live' ? '● ' + mmss(i.secs) : i.state === 'retry' ? '⚠ DIRETTA' : '… DIRETTA';
+  hb.classList.toggle('retry', i.state === 'retry' || !!i.slow);
+  if (i.state !== stLast) {
+    note('diretta: ' + i.state);
+    if (i.state === 'error' || (i.state === 'retry' && stLast === 'live')) toast(i.state === 'error' ? 'Diretta ferma: ' + i.text : 'Diretta interrotta, riprovo');
+    stLast = i.state;
+    tcPublish();      // il telecomando vede subito se si trasmette
+    if (L.on) updateHud();
+  }
+}
+function stPlatChanged() {
+  const p = PLATFORMS[$('stPlat').value] || PLATFORMS.other;
+  $('stUrlRow').hidden = $('stPlat').value !== 'other';
+  $('stHint').textContent = p.hint;
+}
+function stRead() {
+  return { platform: $('stPlat').value, url: $('stUrl').value, key: $('stKey').value, converter: $('stConv').value, token: $('stTok').value, bps: (QUALITY.find((q) => q.id === $('stQ').value) || QUALITY[1]).bps, compat: $('stCompat').checked };
+}
+function stSave() {
+  const c = stRead(), remember = $('stRemember').checked;
+  store.st = { plat: c.platform, url: c.url, conv: c.converter, token: c.token, q: $('stQ').value, compat: c.compat, remember, key: remember ? c.key : '' };
+  persist();
+}
+(function stInit() {
+  QUALITY.forEach((q) => { const o = document.createElement('option'); o.value = q.id; o.textContent = q.label; $('stQ').appendChild(o); });
+  const st = store.st || {};
+  $('stPlat').value = PLATFORMS[st.plat] ? st.plat : 'youtube';
+  $('stQ').value = QUALITY.some((q) => q.id === st.q) ? st.q : DEFAULT_QUALITY;
+  $('stUrl').value = st.url || ''; $('stConv').value = st.conv || ''; $('stTok').value = st.token || ''; $('stKey').value = st.key || '';
+  $('stCompat').checked = !!st.compat; $('stRemember').checked = st.remember !== false;
+  stPlatChanged();
+})();
+$('stPlat').onchange = () => { stPlatChanged(); stSave(); };
+['stQ', 'stUrl', 'stKey', 'stConv', 'stTok', 'stCompat', 'stRemember'].forEach((id) => { $(id).onchange = stSave; });
+$('stGo').onclick = () => {
+  if (ST.active) { if (confirm('Fermare la diretta?')) ST.stop(); return; }
+  if (S.mode !== 'camera') { stSay('Apri prima la camera: la diretta trasmette l\'immagine con il tabellone.'); return; }
+  if (typeof MediaRecorder === 'undefined' || !cv.captureStream) { stSay('Questo browser non può registrare il video: la diretta non è disponibile.'); return; }
+  const c = stRead(), chk = checkSettings(c, location.protocol);
+  if (!chk.ok) { stSay(chk.error); return; }
+  $('stKey').value = chk.key; $('stConv').value = chk.converter; stSave();
+  stSay('');
+  ST.start({ converter: chk.converter, token: c.token.trim(), url: chk.url, key: chk.key, bps: c.bps, compat: c.compat });
+};
+$('hudStream').onclick = () => { openMore(); $('stBox').scrollIntoView({ block: 'center' }); };
+
 // Ripresa di una partita salvata
 if (store.snapshot && store.snapshot.events && store.snapshot.events.length) $('resumeBtn').hidden = false;
 $('resumeBtn').onclick = () => startMatch(store.snapshot);
 
-window.__vl = { S, L, TC, refreshAll, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };
+window.__vl = { S, L, TC, ST, refreshAll, enterLive, exitLive, setPhase, startMatch, openFile, ensureDetector, rebuildCal, seekTo, timedOccupancy, clock };

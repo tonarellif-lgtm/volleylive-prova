@@ -1,0 +1,10 @@
+{
+  "name": "volleylive-stream",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Convertitore di diretta: WebSocket dal telefono, RTMP/RTMPS verso YouTube o Facebook (ffmpeg)",
+  "scripts": { "start": "node server.mjs" },
+  "engines": { "node": ">=20" },
+  "dependencies": { "ws": "^8.18.0" }
+}
