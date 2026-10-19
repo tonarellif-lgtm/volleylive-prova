@@ -13,6 +13,8 @@
 // Il codice di accesso (STREAM_TOKEN) è obbligatorio. Chiavi di streaming e codice non vengono mai scritti nel registro
 // né rimandati al telefono: ogni testo di ffmpeg passa da redact().
 import http from 'node:http';
+import https from 'node:https';
+import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { WebSocketServer } from 'ws';
@@ -36,6 +38,7 @@ export function startStream(opts = {}) {
   const cfg = {
     port: opts.port ?? 8080, token: opts.token || '', origins: opts.origins || [], hosts: opts.hosts && opts.hosts.length ? opts.hosts : DEFAULT_HOSTS,
     maxSessions: opts.maxSessions ?? 1, ffmpeg: opts.ffmpeg || 'ffmpeg', mode: opts.mode === 'transcode' ? 'transcode' : 'auto',
+    tls: opts.tls && opts.tls.cert && opts.tls.key ? opts.tls : null,    // {cert, key} (testo PEM): il convertitore parla direttamente wss://
     log: opts.log || (() => {}), ...LIMITS, ...(opts.limits || {}),
   };
   if (!cfg.token) throw new Error('Manca STREAM_TOKEN: senza codice di accesso il convertitore non parte.');
@@ -44,7 +47,7 @@ export function startStream(opts = {}) {
   if (!ffOk) cfg.log('ATTENZIONE: ffmpeg non trovato (' + cfg.ffmpeg + ')');
 
   const active = new Set();
-  const server = http.createServer((req, res) => {
+  const onRequest = (req, res) => {
     if (req.url === '/health') {
       res.writeHead(ffOk ? 200 : 503, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: ffOk, ffmpeg: ffOk, sessions: active.size }));
@@ -52,7 +55,8 @@ export function startStream(opts = {}) {
     }
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('volleylive stream ok\n');
-  });
+  };
+  const server = cfg.tls ? https.createServer({ cert: cfg.tls.cert, key: cfg.tls.key }, onRequest) : http.createServer(onRequest);
   const wss = new WebSocketServer({ noServer: true, maxPayload: cfg.maxChunk });
   server.on('upgrade', (req, socket, head) => {
     const origin = req.headers.origin;
@@ -170,7 +174,7 @@ export function startStream(opts = {}) {
 
   return new Promise((resolve) => {
     server.listen(cfg.port, () => resolve({
-      port: server.address().port, active, ffmpeg: ffOk,
+      port: server.address().port, active, ffmpeg: ffOk, tls: !!cfg.tls,
       close: () => new Promise((r) => { for (const c of wss.clients) c.terminate(); server.close(r); }),
     }));
   });
@@ -179,11 +183,18 @@ export function startStream(opts = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const env = process.env;
   try {
+    // TLS_CERT e TLS_KEY (percorsi dei file PEM): il convertitore risponde in https/wss da solo, senza reverse proxy
+    let tls = null;
+    if (env.TLS_CERT || env.TLS_KEY) {
+      if (!env.TLS_CERT || !env.TLS_KEY) throw new Error('TLS_CERT e TLS_KEY vanno scritti insieme.');
+      try { tls = { cert: fs.readFileSync(env.TLS_CERT), key: fs.readFileSync(env.TLS_KEY) }; }
+      catch (e) { throw new Error('Non riesco a leggere il certificato (' + env.TLS_CERT + ', ' + env.TLS_KEY + '): ' + e.code + '. Controlla la cartella certs e che i file siano leggibili.'); }
+    }
     const r = await startStream({
-      port: +env.PORT || 8080, token: env.STREAM_TOKEN, origins: parseList(env.ALLOWED_ORIGINS).map((o) => o.replace(/\/+$/, '')),
+      tls, port: +env.PORT || 8080, token: env.STREAM_TOKEN, origins: parseList(env.ALLOWED_ORIGINS).map((o) => o.replace(/\/+$/, '')),
       hosts: [...DEFAULT_HOSTS, ...parseList(env.ALLOWED_HOSTS)], maxSessions: +env.MAX_SESSIONS || 1, mode: env.MODE, log: (m) => console.log(new Date().toISOString() + ' ' + m),
     });
-    console.log('Convertitore in ascolto sulla porta ' + r.port + (r.ffmpeg ? '' : ' (ffmpeg MANCANTE)'));
+    console.log('Convertitore in ascolto sulla porta ' + r.port + (r.tls ? ' (https/wss)' : ' (http/ws: dalla pagina https serve un certificato, vedi README)') + (r.ffmpeg ? '' : ' (ffmpeg MANCANTE)'));
     const bye = () => r.close().then(() => process.exit(0));
     process.on('SIGTERM', bye); process.on('SIGINT', bye);
   } catch (e) { console.error(e.message); process.exit(1); }

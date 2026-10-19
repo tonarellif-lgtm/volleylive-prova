@@ -193,7 +193,7 @@ export class LiveStream {
     const why = this.lastErr;
     this._teardown();
     if (!this.everOpened) {
-      this._fail('Non riesco a collegarmi al convertitore. Controlla l\'indirizzo, che il NAS sia raggiungibile (VPN accesa?) e che il certificato sia valido: da questa pagina serve wss://.');
+      this._fail('Non riesco a collegarmi al convertitore. Controlla l\'indirizzo, che il NAS sia raggiungibile (VPN accesa?) e che il certificato sia valido: da questa pagina serve wss://, e con un indirizzo IP serve il certificato della tua CA installato e reso attendibile sul telefono (stream/README.md).');
       return;
     }
     if (wasLive) this.attempt = 0;

@@ -19,19 +19,40 @@ Non serve alcun account o servizio a pagamento: gira sul tuo NAS. La chiave dell
 
 ## Installazione sul Synology
 
-1. In **File Station** crea la cartella `docker/volleylive_stream` e copia dentro il contenuto di `web/stream/` (`Dockerfile`, `docker-compose.yml`, `package.json`, `package-lock.json`, `lib.js`, `server.mjs`, `.env.example`). Non servono `node_modules`.
+1. In **File Station** crea la cartella `docker/volleylive_stream` e copia dentro il contenuto di `web/stream/` (`Dockerfile`, `docker-compose.yml`, `package.json`, `package-lock.json`, `lib.js`, `server.mjs`, `healthcheck.mjs`, `make-cert.sh`, `.env.example` e la cartella vuota `certs`). Non servono `node_modules`.
 2. Copia `.env.example` in un file chiamato `.env` (stessa cartella) e scrivi un **codice di accesso lungo e casuale** al posto di `scrivi-qui-un-codice-lungo-e-casuale`. Per generarlo: `openssl rand -hex 16`, oppure il generatore del tuo gestore di password. Lo stesso codice va poi nella pagina VolleyLive.
 3. **Container Manager → Progetto → Crea**: nome `volleylive_stream`, percorso `/volume1/docker/volleylive_stream`, «Usa docker-compose.yml esistente». Avvia il progetto: la prima volta costruisce l'immagine (qualche minuto, scarica Node e ffmpeg).
    Da SSH, in alternativa: `cd /volume1/docker/volleylive_stream && sudo docker compose up -d --build`.
-4. Prova: apri `http://IP-DEL-NAS:8090/health`. Deve rispondere `{"ok":true,"ffmpeg":true,"sessions":0}`. `ffmpeg:false` vuol dire che dentro l'immagine ffmpeg non c'è (la costruzione non è andata a buon fine).
+4. Prova: apri `http://IP-DEL-NAS:8090/health` (`https://…` se hai attivato il certificato). Deve rispondere `{"ok":true,"ffmpeg":true,"sessions":0}`. `ffmpeg:false` vuol dire che dentro l'immagine ffmpeg non c'è (la costruzione non è andata a buon fine).
 
 La porta del NAS è `8090` (si cambia nella riga `ports` di `docker-compose.yml`).
 
 ## Come ci arriva il telefono (la parte che conta)
 
-La pagina VolleyLive è su `https://` e anche la camera del telefono vuole `https://`. Una pagina https **non può** aprire un `ws://` normale (il browser lo blocca come «contenuto misto»): serve un indirizzo **`wss://` con un certificato valido** per quel nome. Quindi `ws://192.168.1.20:8090` non funziona; serve un nome vero, per esempio `wss://stream.tuonome.synology.me`.
+La pagina VolleyLive è su `https://` e anche la camera del telefono vuole `https://`. Una pagina https **non può** aprire un `ws://` normale (il browser lo blocca come «contenuto misto»): serve un indirizzo **`wss://` con un certificato che il telefono considera valido** per quell'indirizzo. Due strade.
 
-Strada più semplice con un Synology (i nomi dei menu possono cambiare un po' tra le versioni di DSM):
+### A) Con la VPN, dall'indirizzo IP (il caso più semplice se ci arrivi già così)
+
+Nessuna autorità pubblica rilascia certificati per un indirizzo privato, quindi ne fai una tua, piccola, che vale **solo per quell'indirizzo** e che installi una volta sul telefono. Il convertitore parla poi https/wss da solo, senza reverse proxy.
+
+1. **Crea il certificato.** In SSH sul NAS (oppure su un Mac/Linux, o da WSL/Git Bash su Windows), dalla cartella del progetto:
+   ```
+   cd /volume1/docker/volleylive_stream
+   sh make-cert.sh 10.8.0.1
+   ```
+   al posto di `10.8.0.1` scrivi l'indirizzo con cui raggiungi il NAS **dalla VPN** (se lo raggiungi anche con un altro indirizzo, per esempio quello di casa, scrivili tutti: `sh make-cert.sh 10.8.0.1 192.168.1.20`). Se lo fai su un altro computer, copia poi sul NAS la cartella `certs` (e tieni da parte `ca`).
+   Lo script crea `certs/server.crt` e `certs/server.key` per il convertitore, e `ca/volleylive-ca.crt` da installare sul telefono. La CA ha un vincolo di nome: anche se qualcuno ne rubasse la chiave non potrebbe certificare altri siti. Il certificato dura 825 giorni (circa 2 anni e 3 mesi).
+2. **Dillo al convertitore.** Nel file `.env` togli il `#` dalle due righe `TLS_CERT=/certs/server.crt` e `TLS_KEY=/certs/server.key`, poi ferma e riavvia il progetto.
+3. **Installa la CA sul telefono, una volta sola.**
+   - **iPhone**: porta `ca/volleylive-ca.crt` sul telefono (AirDrop, una mail a te stesso, oppure scaricalo da File Station con Safari). Toccalo: «Profilo scaricato». Poi **Impostazioni → in alto «Profilo scaricato» → Installa**. Infine **Impostazioni → Generali → Info → Impostazioni attendibilità certificati** e attiva l'interruttore del certificato «VolleyLive CA». Senza quest'ultimo passaggio Safari non si fida.
+   - **Android**: Impostazioni → Sicurezza (o «Crittografia e credenziali») → Installa un certificato → Certificato CA, e scegli il file.
+4. **Controlla**: con la VPN accesa, apri nel browser del telefono `https://10.8.0.1:8090/health` (con il tuo indirizzo). Se vedi `{"ok":true,…}` senza avvisi, il certificato è a posto.
+5. Nella pagina VolleyLive: «Indirizzo del convertitore» → `wss://10.8.0.1:8090`.
+6. Quando hai finito sposta `ca/ca.key` in un posto sicuro (o cancellala): serve solo per rinnovare il certificato rilanciando lo script, e finché la CA è la stessa il telefono non deve reinstallare nulla. Se cambi gli indirizzi la CA è nuova e va reinstallata.
+
+### B) Con un nome vero e un certificato pubblico (anche senza VPN)
+
+Serve un nome raggiungibile da Internet e un certificato Let's Encrypt. Con un Synology (i nomi dei menu possono cambiare un po' tra le versioni di DSM):
 
 1. **Nome**: Pannello di controllo → Accesso esterno → DDNS: registra un nome `tuonome.synology.me`.
 2. **Certificato**: Pannello di controllo → Sicurezza → Certificato → Aggiungi → «Ottieni un certificato da Let's Encrypt» per quel nome. (Serve che la porta 80 raggiunga il NAS durante il rilascio.)
@@ -41,11 +62,13 @@ Strada più semplice con un Synology (i nomi dei menu possono cambiare un po' tr
    - Scheda «Intestazione personalizzata» → Crea → **WebSocket** (aggiunge le intestazioni `Upgrade`/`Connection`, senza non funziona)
    - Assegna il certificato di Let's Encrypt a questa regola (Impostazioni → Certificato).
 4. **Router**: inoltra la porta scelta (443 o 8443) verso il NAS.
-5. Nella pagina VolleyLive → «⋯ Altro» → Diretta → «Indirizzo del convertitore»: `wss://stream.tuonome.synology.me` (con `:8443` in fondo se non usi la 443).
+5. Nella pagina: `wss://stream.tuonome.synology.me` (con `:8443` in fondo se non usi la 443).
 
-Con una **VPN** (come per le altre tue app) il discorso cambia poco: il telefono raggiunge il NAS, ma il browser vuole comunque un nome con certificato valido. Con la VPN accesa il nome DDNS deve arrivare al NAS (DNS interno o un nome dedicato) e il certificato deve valere per quel nome. Con l'indirizzo IP e senza certificato non si apre. Se ti trovi in palestra senza VPN, la diretta funziona solo se il nome è raggiungibile da Internet come sopra.
+Se hai un dominio tuo, c'è una variante senza aprire porte: un record DNS `stream.tuodominio.it` che punta all'IP privato del NAS (per la VPN) e un certificato Let's Encrypt ottenuto con la verifica DNS (per esempio con `acme.sh`). Metti `fullchain.pem` e `privkey.pem` nella cartella `certs` (il file della chiave deve essere leggibile dall'utente del contenitore), scrivili in `TLS_CERT`/`TLS_KEY` e usa `wss://stream.tuodominio.it:8090`: nessuna CA da installare.
 
-Non esporre mai la porta `8090` così com'è su Internet: passa dal reverse proxy con il certificato. Anche così il convertitore si difende da solo: vuole il codice di accesso (confronto a tempo costante, e una pausa di 1 secondo a ogni codice sbagliato), accetta solo collegamenti dalla pagina indicata in `ALLOWED_ORIGINS` e solo server YouTube/Facebook (più quelli che aggiungi tu), e una sola diretta alla volta.
+### Sicurezza
+
+Non esporre la porta `8090` su Internet senza certificato. Il convertitore si difende da solo: vuole il codice di accesso (confronto a tempo costante, e una pausa di 1 secondo a ogni codice sbagliato), accetta solo collegamenti dalla pagina indicata in `ALLOWED_ORIGINS` e solo server YouTube/Facebook (più quelli che aggiungi tu), e una sola diretta alla volta. `certs/`, `ca/` e `.env` non finiscono nell'immagine Docker né in Git.
 
 ## Impostazioni (file `.env`)
 
@@ -56,6 +79,7 @@ Non esporre mai la porta `8090` così com'è su Internet: passa dal reverse prox
 | `ALLOWED_HOSTS` | server RTMP oltre a YouTube e Facebook | vuoto |
 | `MODE` | `auto` copia H.264/AAC; `transcode` ricodifica sempre | `auto` |
 | `MAX_SESSIONS` | dirette contemporanee | `1` |
+| `TLS_CERT`, `TLS_KEY` | percorsi (dentro il contenitore) del certificato e della chiave: il convertitore risponde in https/wss da solo | vuoti (http/ws) |
 
 Dopo ogni modifica del `.env`: Container Manager → Progetto → ferma e avvia (oppure `docker compose up -d`).
 
@@ -76,7 +100,7 @@ I messaggi del convertitore si leggono in Container Manager → Contenitore → 
 
 | Messaggio nella pagina | Causa probabile |
 |---|---|
-| «Non riesco a collegarmi al convertitore…» | indirizzo sbagliato; VPN spenta; certificato non valido o non per quel nome; manca l'intestazione WebSocket nel reverse proxy; porta non inoltrata; oppure la pagina non è in `ALLOWED_ORIGINS` (nel registro compare «collegamento rifiutato: la pagina … non è in ALLOWED_ORIGINS») |
+| «Non riesco a collegarmi al convertitore…» | indirizzo sbagliato; VPN spenta; certificato non valido (con l'IP: CA non installata o non resa attendibile in Impostazioni → Generali → Info → Impostazioni attendibilità certificati, oppure il tuo indirizzo non è tra quelli scritti con `make-cert.sh`: prova `https://INDIRIZZO:8090/health` nel browser del telefono); manca l'intestazione WebSocket nel reverse proxy; porta non inoltrata; oppure la pagina non è in `ALLOWED_ORIGINS` (nel registro compare «collegamento rifiutato: la pagina … non è in ALLOWED_ORIGINS») |
 | «Codice di accesso non valido» | il codice nella pagina non è quello del `.env` (dopo averlo cambiato va riavviato il progetto) |
 | «Questo convertitore non può trasmettere verso …» | server RTMP diverso da YouTube/Facebook: aggiungilo in `ALLOWED_HOSTS` |
 | «C'è già una diretta in corso» | un'altra sessione (o una caduta di rete non ancora scaduta: attendi 20 secondi) |

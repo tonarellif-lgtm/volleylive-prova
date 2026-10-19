@@ -18,7 +18,12 @@ services:
       # auto = copia H.264/AAC senza ricodificare (poca CPU); transcode = ricodifica sempre (serve un NAS più potente)
       MODE: ${MODE:-auto}
       MAX_SESSIONS: ${MAX_SESSIONS:-1}
+      # per rispondere direttamente in https/wss (accesso con IP e VPN): vedi make-cert.sh e README. Vuoti = http/ws (serve un reverse proxy con certificato)
+      TLS_CERT: ${TLS_CERT:-}
+      TLS_KEY: ${TLS_KEY:-}
       TZ: Europe/Rome
+    volumes:
+      - ./certs:/certs:ro
     ports:
       - "8090:8080"
     # Decommenta per non far salire la CPU del NAS oltre un limite se ricodifica:
