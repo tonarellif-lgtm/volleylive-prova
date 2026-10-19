@@ -72,9 +72,10 @@ si usava 720p). Nella partita:
   Il telecomando è provato con due pagine nel browser e un relay locale; il Worker installato su Cloudflare ha superato la prova
   automatica (due collegati nella stessa stanza) ma **non è stato provato su rete mobile vera**.
 - La diretta è provata con una camera finta nel browser, il convertitore con Node e ffmpeg e un ricevitore RTMP locale (arrivano
-  video H.264, audio AAC e il tabellone nei fotogrammi): **non è stata provata su iPhone, né verso YouTube o Facebook veri, né
-  l'immagine Docker né l'installazione della CA su iPhone** (dove l'ho scritta non c'è Docker). Il video che esce dal MediaRecorder di Safari e il fotogramma chiave
-  ogni 2 secondi richiesto da Facebook vanno visti su un prova vera (se serve c'è «Ricodifica sempre»).
+  video H.264, audio AAC e il tabellone nei fotogrammi). Sul campo, con l'installazione dell'autore, è stata provata **su
+  Synology con Docker (immagine costruita sul NAS), iPhone in VPN con la CA installata, `wss://` sull'IP del NAS e una prova trasmessa su
+  YouTube**. **Non ancora provato:** Facebook (chiede un fotogramma chiave ogni 2 secondi: se serve c'è «Ricodifica sempre»), una
+  partita intera in diretta (tenuta, riscaldamento e batteria del telefono, rete debole) e la diretta insieme alla registrazione per ore.
 - Dal telecomando non si fa ancora la revisione dei punti (⇄, ✕, ✓): quella resta sul telefono con la camera.
 - La pagina deve restare aperta e il telefono acceso; con lo schermo bloccato Safari ferma camera e riconoscimento.
 - La diretta richiede il convertitore sul NAS e un indirizzo `wss://` con certificato valido (vedi `stream/README.md`; per un IP raggiunto in VPN `stream/make-cert.sh` crea una piccola CA, vincolata a quell'IP, da installare una volta sul telefono); con la rete dati debole il ritardo cresce e la pagina riparte da capo.
