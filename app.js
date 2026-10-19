@@ -504,6 +504,7 @@ bind(['subA', 'hudSubA'], () => removePoint('a'));
 bind(['subB', 'hudSubB'], () => removePoint('b'));
 // Fine partita: dal telecomando la conferma si chiede sul telecomando stesso, qui sul telefono con la camera non servirebbe a nessuno
 function endMatchNow() {
+  if (S.recording) stopRec();      // il video si chiude e si presenta da salvare (finishRec apre «Altro» con la registrazione pronta)
   S.live = false; S.lockCal = false;
   $('setup').hidden = false; $('play').hidden = true;
   S.engine = null; S.scorer = null; S.dirty = true;
@@ -514,7 +515,8 @@ function endMatchNow() {
   if (L.on) { closeMore(); setPhase('setup'); }
 }
 bind(['endMatch', 'hudEnd'], () => {
-  if (S.engine && S.engine.events.length && !confirm('Terminare la partita? Il punteggio e la revisione dei punti vengono cancellati.')) return;
+  const msg = 'Terminare la partita? Il punteggio e la revisione dei punti vengono cancellati' + (S.recording ? ' e la registrazione si ferma (resta da salvare).' : '.');
+  if (S.engine && S.engine.events.length && !confirm(msg)) return;
   endMatchNow();
 });
 $('debugChk').onchange = () => { S.dirty = true; };

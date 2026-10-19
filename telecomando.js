@@ -110,7 +110,7 @@ $('bVia').onclick = () => send('via');
 $('bSubA').onclick = () => send('subA');
 $('bSubB').onclick = () => send('subB');
 $('bEnd').onclick = () => {
-  if (online() && !confirm('Terminare la partita? Sul telefono con la camera il punteggio e la revisione dei punti vengono cancellati.')) return;
+  if (online() && !confirm('Terminare la partita? Sul telefono con la camera il punteggio e la revisione dei punti vengono cancellati e l\'eventuale registrazione si ferma (resta da salvare lì).')) return;
   send('end');
 };
 $('auto').onchange = () => send('auto', { on: $('auto').checked });

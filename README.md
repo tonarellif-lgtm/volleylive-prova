@@ -21,8 +21,8 @@ riconosce chi sta alla battuta e assegna i punti da sola. Nessun server: tutto r
    squadra di quel lato. La prima battuta del set non è un punto. Se l'azione si ripete (contesa) e il punto è già stato dato, si toglie con −1.
 5. **Correzioni**: +1, −1 (toglie l'ultimo punto di quella squadra nel set; se era un punto automatico, nella revisione
    risulta «tolto»), Annulla, «Imposta il punteggio del set» e, a fine partita, la tabella di revisione
-   (▶︎ rivede il momento, ⇄ inverte il punto, ✕ lo toglie). **Fine partita** (con conferma) chiude la partita e cancella
-   punteggio e revisione: prima copia il rapporto, se ti serve. Restano il campo, le squadre e il collegamento del telecomando.
+   (▶︎ rivede il momento, ⇄ inverte il punto, ✕ lo toglie). **Fine partita** (con conferma) chiude la partita, cancella
+   punteggio e revisione (prima copia il rapporto, se ti serve) e, se si sta registrando, ferma il video e lo presenta da salvare. Restano il campo, le squadre e il collegamento del telecomando.
 
 6. **Telecomando**: un secondo telefono comanda la partita senza Wi-Fi (basta la rete dati). Sul telefono con la camera:
    «⋯ Altro» → Telecomando → indirizzo del servizio → «Collega un telecomando» → «Condividi il link». Sull'altro telefono il link
