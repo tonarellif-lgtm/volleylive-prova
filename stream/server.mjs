@@ -15,6 +15,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import fs from 'node:fs';
+import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { WebSocketServer } from 'ws';
@@ -38,6 +39,7 @@ export function startStream(opts = {}) {
   const cfg = {
     port: opts.port ?? 8080, token: opts.token || '', origins: opts.origins || [], hosts: opts.hosts && opts.hosts.length ? opts.hosts : DEFAULT_HOSTS,
     maxSessions: opts.maxSessions ?? 1, ffmpeg: opts.ffmpeg || 'ffmpeg', mode: opts.mode === 'transcode' ? 'transcode' : 'auto',
+    caCert: opts.caCert || null,      // certificato pubblico della CA: si scarica da /ca.crt per installarlo sul telefono
     tls: opts.tls && opts.tls.cert && opts.tls.key ? opts.tls : null,    // {cert, key} (testo PEM): il convertitore parla direttamente wss://
     log: opts.log || (() => {}), ...LIMITS, ...(opts.limits || {}),
   };
@@ -51,6 +53,11 @@ export function startStream(opts = {}) {
     if (req.url === '/health') {
       res.writeHead(ffOk ? 200 : 503, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: ffOk, ffmpeg: ffOk, sessions: active.size }));
+      return;
+    }
+    if (req.url === '/ca.crt' && cfg.caCert) {      // è un certificato pubblico, non un segreto: serve a installarlo sul telefono
+      res.writeHead(200, { 'content-type': 'application/x-x509-ca-cert', 'content-disposition': 'attachment; filename="volleylive-ca.crt"', 'cache-control': 'no-store' });
+      res.end(cfg.caCert);
       return;
     }
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
@@ -190,8 +197,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       try { tls = { cert: fs.readFileSync(env.TLS_CERT), key: fs.readFileSync(env.TLS_KEY) }; }
       catch (e) { throw new Error('Non riesco a leggere il certificato (' + env.TLS_CERT + ', ' + env.TLS_KEY + '): ' + e.code + '. Controlla la cartella certs e che i file siano leggibili.'); }
     }
+    // certificato pubblico della CA (make-cert.sh lo copia accanto a quello del server): si scarica da /ca.crt
+    let caCert = null;
+    const caPath = env.CA_FILE || (env.TLS_CERT ? path.join(path.dirname(env.TLS_CERT), 'volleylive-ca.crt') : '');
+    if (caPath) { try { caCert = fs.readFileSync(caPath); } catch (e) { /* non c'è: /ca.crt non viene offerto */ } }
     const r = await startStream({
-      tls, port: +env.PORT || 8080, token: env.STREAM_TOKEN, origins: parseList(env.ALLOWED_ORIGINS).map((o) => o.replace(/\/+$/, '')),
+      tls, caCert, port: +env.PORT || 8080, token: env.STREAM_TOKEN, origins: parseList(env.ALLOWED_ORIGINS).map((o) => o.replace(/\/+$/, '')),
       hosts: [...DEFAULT_HOSTS, ...parseList(env.ALLOWED_HOSTS)], maxSessions: +env.MAX_SESSIONS || 1, mode: env.MODE, log: (m) => console.log(new Date().toISOString() + ' ' + m),
     });
     console.log('Convertitore in ascolto sulla porta ' + r.port + (r.tls ? ' (https/wss)' : ' (http/ws: dalla pagina https serve un certificato, vedi README)') + (r.ffmpeg ? '' : ' (ffmpeg MANCANTE)'));

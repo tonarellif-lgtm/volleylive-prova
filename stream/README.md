@@ -38,16 +38,19 @@ Nessuna autorità pubblica rilascia certificati per un indirizzo privato, quindi
 1. **Crea il certificato.** In SSH sul NAS (oppure su un Mac/Linux, o da WSL/Git Bash su Windows), dalla cartella del progetto:
    ```
    cd /volume1/docker/volleylive_stream
-   sh make-cert.sh 10.8.0.1
+   sh make-cert.sh 192.168.178.7
    ```
-   al posto di `10.8.0.1` scrivi l'indirizzo con cui raggiungi il NAS **dalla VPN** (se lo raggiungi anche con un altro indirizzo, per esempio quello di casa, scrivili tutti: `sh make-cert.sh 10.8.0.1 192.168.1.20`). Se lo fai su un altro computer, copia poi sul NAS la cartella `certs` (e tieni da parte `ca`).
-   Lo script crea `certs/server.crt` e `certs/server.key` per il convertitore, e `ca/volleylive-ca.crt` da installare sul telefono. La CA ha un vincolo di nome: anche se qualcuno ne rubasse la chiave non potrebbe certificare altri siti. Il certificato dura 825 giorni (circa 2 anni e 3 mesi).
+   al posto di `192.168.178.7` scrivi l'indirizzo con cui raggiungi il NAS **dalla VPN** (se lo raggiungi anche con un altro indirizzo, scrivili tutti: `sh make-cert.sh 192.168.178.7 10.8.0.1`). Rilanciarlo con gli stessi indirizzi è innocuo: riusa la CA, quindi il telefono non deve reinstallare nulla. Se lo fai su un altro computer, copia poi sul NAS la cartella `certs` (e tieni da parte `ca`).
+   Lo script crea `certs/server.crt` e `certs/server.key` per il convertitore, e `ca/volleylive-ca.crt` da installare sul telefono (una copia pubblica sta anche in `certs/` e il convertitore la offre su `/ca.crt`). La CA ha un vincolo di nome: anche se qualcuno ne rubasse la chiave non potrebbe certificare altri siti. Il certificato dura 825 giorni (circa 2 anni e 3 mesi).
 2. **Dillo al convertitore.** Nel file `.env` togli il `#` dalle due righe `TLS_CERT=/certs/server.crt` e `TLS_KEY=/certs/server.key`, poi ferma e riavvia il progetto.
-3. **Installa la CA sul telefono, una volta sola.**
-   - **iPhone**: porta `ca/volleylive-ca.crt` sul telefono (AirDrop, una mail a te stesso, oppure scaricalo da File Station con Safari). Toccalo: «Profilo scaricato». Poi **Impostazioni → in alto «Profilo scaricato» → Installa**. Infine **Impostazioni → Generali → Info → Impostazioni attendibilità certificati** e attiva l'interruttore del certificato «VolleyLive CA». Senza quest'ultimo passaggio Safari non si fida.
-   - **Android**: Impostazioni → Sicurezza (o «Crittografia e credenziali») → Installa un certificato → Certificato CA, e scegli il file.
-4. **Controlla**: con la VPN accesa, apri nel browser del telefono `https://10.8.0.1:8090/health` (con il tuo indirizzo). Se vedi `{"ok":true,…}` senza avvisi, il certificato è a posto.
-5. Nella pagina VolleyLive: «Indirizzo del convertitore» → `wss://10.8.0.1:8090`.
+3. **Installa la CA sul telefono, una volta sola** (con la VPN accesa e il convertitore avviato).
+   - **iPhone**: apri in Safari `https://192.168.178.7:8090/ca.crt` (con il tuo indirizzo). Safari avvisa che la connessione non è privata: è normale, il certificato non è ancora installato. Tocca «Mostra dettagli» → «Visita questo sito web» e conferma. Alla richiesta «Questo sito web sta tentando di scaricare un profilo di configurazione» tocca **Consenti**, poi **Chiudi**.
+     Poi **Impostazioni → «Profilo scaricato» (in alto) → Installa**, inserisci il codice del telefono e conferma **Installa** nelle schermate seguenti.
+     Infine **Impostazioni → Generali → Info → Impostazioni attendibilità certificati** e attiva l'interruttore del certificato «VolleyLive CA…». Senza quest'ultimo passaggio Safari non si fida.
+     Se il download non parte, manda a te stesso il file `ca/volleylive-ca.crt` (è pubblico, non è il file della chiave) come allegato di una mail e aprilo dall'app Mail: il resto è uguale.
+   - **Android**: Impostazioni → Sicurezza (o «Crittografia e credenziali») → Installa un certificato → Certificato CA, e scegli il file (scaricalo da `https://…:8090/ca.crt`).
+4. **Controlla**: sempre con la VPN accesa, apri nel browser del telefono `https://192.168.178.7:8090/health`. Se vedi `{"ok":true,…}` senza avvisi, il certificato è a posto.
+5. Nella pagina VolleyLive: «Indirizzo del convertitore» → `wss://192.168.178.7:8090`.
 6. Quando hai finito sposta `ca/ca.key` in un posto sicuro (o cancellala): serve solo per rinnovare il certificato rilanciando lo script, e finché la CA è la stessa il telefono non deve reinstallare nulla. Se cambi gli indirizzi la CA è nuova e va reinstallata.
 
 ### B) Con un nome vero e un certificato pubblico (anche senza VPN)

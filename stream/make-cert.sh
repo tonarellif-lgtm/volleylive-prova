@@ -7,7 +7,7 @@
 #        DAYS=825 ./make-cert.sh 192.168.1.20 10.8.0.1
 #
 # Crea:  certs/server.crt e certs/server.key   → li legge il contenitore (cartella montata in sola lettura)
-#        ca/volleylive-ca.crt                  → il file da installare sul telefono (non è segreto)
+#        ca/volleylive-ca.crt                  → il file da installare sul telefono (non è segreto; copia anche in certs/, il convertitore lo offre su /ca.crt)
 #        ca/ca.key                             → la chiave della CA: NON copiarla sul telefono, meglio toglierla dal NAS dopo l'uso
 # La CA ha il vincolo «solo questi indirizzi»: anche se la sua chiave finisse in mani sbagliate non può certificare altri siti.
 # Se la CA esiste già per gli stessi indirizzi viene riusata: per rinnovare il certificato non serve reinstallare nulla sul telefono.
@@ -73,7 +73,8 @@ fi
 } > "$tmp/srv.ext"
 openssl req -new -newkey rsa:2048 -nodes -keyout "$out/server.key" -out "$tmp/srv.csr" -config "$tmp/srv.cnf" 2>/dev/null
 openssl x509 -req -in "$tmp/srv.csr" -CA "$ca/volleylive-ca.crt" -CAkey "$ca/ca.key" -CAcreateserial -CAserial "$tmp/ca.srl" -out "$out/server.crt" -days "$DAYS" -sha256 -extfile "$tmp/srv.ext" 2>/dev/null
-chmod 644 "$out/server.crt" "$out/server.key"    # il contenitore gira con un utente non root e deve poter leggere la chiave
+cp "$ca/volleylive-ca.crt" "$out/volleylive-ca.crt"    # copia pubblica: il convertitore la offre su /ca.crt per installarla sul telefono
+chmod 644 "$out/server.crt" "$out/server.key" "$out/volleylive-ca.crt"    # il contenitore gira con un utente non root e deve poter leggere la chiave
 
 # ---- controllo: il certificato deve essere accettato per questi indirizzi
 for h in "$@"; do
@@ -83,4 +84,4 @@ for h in "$@"; do
 done
 echo "Certificato creato per: $names (valido fino al $(openssl x509 -in "$out/server.crt" -noout -enddate | cut -d= -f2))."
 echo "  per il convertitore:  certs/server.crt  certs/server.key   (nel .env: TLS_CERT=/certs/server.crt  TLS_KEY=/certs/server.key)"
-echo "  per il telefono:      ca/volleylive-ca.crt                (da installare e rendere attendibile: vedi README)"
+echo "  per il telefono:      con la VPN accesa apri in Safari  https://$1:8090/ca.crt  (dopo aver avviato il convertitore), oppure usa il file ca/volleylive-ca.crt"
