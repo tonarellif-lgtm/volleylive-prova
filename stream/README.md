@@ -109,6 +109,7 @@ I messaggi del convertitore si leggono in Container Manager → Contenitore → 
 | «C'è già una diretta in corso» | un'altra sessione (o una caduta di rete non ancora scaduta: attendi 20 secondi) |
 | «… ha chiuso il collegamento: controlla server e chiave» | chiave sbagliata o scaduta, oppure la diretta non è ancora creata sul servizio |
 | «Il convertitore non riesce a raggiungere …» | il NAS non esce verso Internet (DNS, firewall) |
+| Nel registro del contenitore: «Non riesco a leggere il certificato … EACCES» (il contenitore si riavvia di continuo) | su DSM i file di `certs` non sono leggibili dall'utente del contenitore: `chown -R 1000:1000 certs && chmod 755 certs && chmod 644 certs/*` e riavvia; se non basta, togli il `#` da `user: "0:0"` in `docker-compose.yml` e fai `docker compose up -d` |
 | «Dal telefono non arriva video» | il telefono non ha avviato la registrazione (schermo bloccato, scheda in secondo piano) |
 
 ## Senza Docker, e prove

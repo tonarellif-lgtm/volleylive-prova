@@ -75,6 +75,8 @@ openssl req -new -newkey rsa:2048 -nodes -keyout "$out/server.key" -out "$tmp/sr
 openssl x509 -req -in "$tmp/srv.csr" -CA "$ca/volleylive-ca.crt" -CAkey "$ca/ca.key" -CAcreateserial -CAserial "$tmp/ca.srl" -out "$out/server.crt" -days "$DAYS" -sha256 -extfile "$tmp/srv.ext" 2>/dev/null
 cp "$ca/volleylive-ca.crt" "$out/volleylive-ca.crt"    # copia pubblica: il convertitore la offre su /ca.crt per installarla sul telefono
 chmod 644 "$out/server.crt" "$out/server.key" "$out/volleylive-ca.crt"    # il contenitore gira con un utente non root e deve poter leggere la chiave
+chmod 755 "$out" 2>/dev/null || true
+chown 1000:1000 "$out" "$out/server.crt" "$out/server.key" "$out/volleylive-ca.crt" 2>/dev/null || true    # uid dell'utente «node» del contenitore (serve su DSM, che ha le ACL)
 
 # ---- controllo: il certificato deve essere accettato per questi indirizzi
 for h in "$@"; do
